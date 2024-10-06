@@ -2,6 +2,15 @@ import MetaTrader5 as mt5
 from pyrogram import Client, filters
 import re
 from time import sleep
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
+API_ID = os.getenv("API_ID")
+API_HASH = os.getenv("API_HASH")
+SESSION_STRING = os.getenv("SESSION_STRING")
 
 from_chats = [
     {"id": 1882105856, "name": "CAC40 + FRA40 TRADING SIGNALS"},
@@ -39,7 +48,12 @@ symbols = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD', 'CADCHF', 'CADJPY',
            'GBPCHF', 'GBPJPY', 'GBPNZD', 'GBPUSD', 'EURAUD', 'EURCAD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD',
            'EURUSD', 'NZDCAD', 'NZDCHF', 'NZDJPY', 'NZDUSD', 'USDCAD', 'USDCHF', 'USDCNH', 'USDJPY', 'XAUUSD']
 
-bot = Client("name", api_id="", api_hash="")
+bot = Client(
+    session_name=SESSION_STRING,
+    api_id=API_ID,
+    api_hash=API_HASH,
+    workdir="./session_data"  # This sets the working directory for session files
+)
 
 def sltp(chat_id, text, Sl, Tp):
     try:

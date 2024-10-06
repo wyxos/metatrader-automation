@@ -1,113 +1,137 @@
+import re
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-import logging
-import subprocess
-import json
-from dotenv import load_dotenv
+import MetaTrader5 as mt5
 import os
+from dotenv import load_dotenv, set_key
+import asyncio
+import logging
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 # Configure logging to show INFO level messages
 logging.basicConfig(level=logging.INFO)
 
-# Get the variables from the environment
-api_id = int(os.getenv('API_ID'))
-api_hash = os.getenv('API_HASH')
-session_string = os.getenv('SESSION_STRING')
+# Telegram API credentials
+api_id = os.getenv('TELEGRAM_API_ID')
+api_hash = os.getenv('TELEGRAM_API_HASH')
+session_string = os.getenv('TELEGRAM_SESSION_STRING')
 
-# Create the Telegram client
-client = TelegramClient(StringSession(session_string), api_id, api_hash)
+# MetaTrader 5 login credentials
+mt5_account = int(os.getenv('MT5_ACCOUNT'))  # Your MetaTrader Account Number
+mt5_password = os.getenv('MT5_PASSWORD')
+mt5_server = os.getenv('MT5_SERVER')
 
-from_chats = [
-    {"id": 1882105856, "name": "CAC40 + FRA40 TRADING SIGNALS"},
-    {"id": 1316632057, "name": "COMMITMENTS OF TRADER"},
-    {"id": 1925709440, "name": "Forex Signal Factory (free)"},
-    {"id": 1622798974, "name": "Forex US"},
-    {"id": 1619062611, "name": "GBPUSD FX SIGNALS(firepips signal"},
-    {"id": 2069311392, "name": "Gold Xpert"},
-    {"id": 1986643106, "name": "ICT CHARTIST"},
-    {"id": 1945187058, "name": "ICT OFFICIAL ACADEMY"},
-    {"id": 1792592079, "name": "KR CAPITALS"},
-    {"id": 1753932904, "name": "META TRADER 4&5 FOREX SIGNALS"},
-    {"id": 1447871772, "name": "Market Makers FX"},
-    {"id": 1240559594, "name": "Meta Trader 4 Signals (Free)"},
-    {"id": 1924713375, "name": "Mr. Gold | Forex Signals (Free)"},
-    {"id": 1972491378, "name": "NAS100 FOREX TRADING SIGNALS"},
-    {"id": 1840185808, "name": "Smart Money Trader"},
-    {"id": 1569743424, "name": "Snipers FX"},
-    {"id": 1594662743, "name": "Trade with DD"},
-    {"id": 1894282005, "name": "UKOIL + US30 SIGNAL"},
-    {"id": 1898607875, "name": "US30 DOW JONES"},
-    {"id": 1633769909, "name": "US30 Eagle"},
-    {"id": 1253126344, "name": "US30 EMPIRE FREE FOREX SIGNALS"},
-    {"id": 1206081401, "name": "VANTAGE FOREX SIGNALS OFFICIAL"},
-    {"id": 1835439118, "name": "BTCUSD SIGNALS (FREE)"},
-    {"id": 1967476990, "name": "FOXYICTRADER (P.G)"},
-    {"id": 1983270625, "name": "BTCUSD FREE FOREX SIGNALS"},
-    {"id": 1555470470, "name": "US30 KINGDOM"},
-    {"id": 1799805861, "name": "Pro Forex System"},
-    {"id": 2041761858, "name": "OKAKO (VIP)"},
-    {"id": 1452557919, "name": "XAUUSD SIGNAL"}
-]
+client = None
 
-# Define the destination chat
-to_chat = -1001979329330  # Metatrader test
+# Function to generate a new session string and update .env
+async def regenerate_session():
+    async with TelegramClient(StringSession(), api_id, api_hash) as new_client:
+        await new_client.start()
+        new_session_string = new_client.session.save()
+        set_key('.env', 'TELEGRAM_SESSION_STRING', new_session_string)
+        logging.info(f"Session string regenerated and saved to .env: {new_session_string[:10]}... (truncated)")
+        return new_session_string
 
-# Function to call the Node.js script
-def process_message_with_node(message):
+# Initialize Telegram client
+async def initialize_telegram_client():
+    global client, session_string
     try:
-        result = subprocess.run(
-            ['node', 'reformatTradeMessages.mjs'],
-            input=message.encode('utf-8'),
-            capture_output=True,
-            text=True
-        )
-        logging.info(f"Node.js script output: {result.stdout}")
-        logging.error(f"Node.js script error: {result.stderr}")
-
-        if result.returncode == 0 and result.stdout.strip():
-            try:
-                return json.loads(result.stdout)
-            except json.JSONDecodeError as e:
-                logging.error(f"JSON decode error: {e}")
-                return None
-        else:
-            logging.error(f"Node.js script returned non-zero exit code or empty output: {result.returncode}")
-            return None
+        client = TelegramClient(StringSession(session_string), api_id, api_hash)
+        await client.start()
     except Exception as e:
-        logging.error(f"Exception in process_message_with_node: {e}")
-        return None
+        logging.error(f"Error: {e}. Regenerating session string...")
+        session_string = await regenerate_session()
+        client = TelegramClient(StringSession(session_string), api_id, api_hash)
+        await client.start()
 
-# Define the event handler for new messages
-@client.on(events.NewMessage)
-async def my_event_handler(event):
-    chat = await event.get_chat()
+# Channel IDs to monitor
+channel_ids = [1882105856, 1316632057]
 
-    # Log the ID and content of the received message
-    logging.info(f"Received message from chat ID {chat.id} ({chat.title}) : {event.message.text}")
+# Initialize MetaTrader 5 connection
+def mt5_initialize():
+    if not mt5.initialize():
+        logging.error("MetaTrader5 initialization failed. Error code: %s", mt5.last_error())
+        mt5.shutdown()
+    login = mt5.login(mt5_account, password=mt5_password, server=mt5_server)
+    if not login:
+        logging.error("Failed to connect to MT5 account. Error code: %s", mt5.last_error())
+    else:
+        logging.info("Connected to MT5 account")
 
-    # Check if the message was received from any of the source chats
-    for source_chat in from_chats:
-        if chat.id == source_chat["id"]:
-            # Process the message with the Node.js script
-            processed_message = process_message_with_node(event.message.text)
-            if processed_message:
-                # Send the processed message to Metatrader using mql5 (this part will depend on how you plan to send it)
-                logging.info(f"Processed message: {processed_message}")
-                # Here you can send the processed message to Metatrader
-            break
+# Process message to extract trade details
+def parse_signal(message):
+    pattern = r'(BUY|SELL)\s+(NOW\s+)?([A-Z]+|[A-Z]+/[A-Z]+|[A-Z]+\d+)\s+(\d+(\.\d+)?)\s+TP\s+(\d+(\.\d+)?)\s+SL\s+(\d+(\.\d+)?)'
+    match = re.search(pattern, message, re.IGNORECASE)
+    if match:
+        action = match.group(1).upper()
+        symbol = match.group(3).upper()
+        price = float(match.group(4))
+        tp = float(match.group(6))
+        sl = float(match.group(8))
+        return {
+            'action': action,
+            'symbol': symbol,
+            'price': price,
+            'tp': tp,
+            'sl': sl
+        }
+    return None
 
-# Define the main coroutine
-async def main():
-    # Log that the bot is running
-    logging.info("Bot is running...")
-    # Run the client until disconnected
+# Place order in MetaTrader 5
+def place_order(signal):
+    symbol = signal['symbol']
+    action = signal['action']
+    price = signal['price']
+    tp = signal['tp']
+    sl = signal['sl']
+
+    order_type = mt5.ORDER_TYPE_BUY if action == 'BUY' else mt5.ORDER_TYPE_SELL
+
+    # Define order request
+    request = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "symbol": symbol,
+        "volume": 0.1,  # Set your desired volume
+        "type": order_type,
+        "price": price,
+        "sl": sl,
+        "tp": tp,
+        "deviation": 20,
+        "magic": 234000,  # Magic number to identify orders
+        "comment": "Telegram Signal",
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": mt5.ORDER_FILLING_IOC,
+    }
+
+    # Send the order
+    result = mt5.order_send(request)
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        logging.error(f"Failed to place order: {result.retcode}. Error: {result.comment}")
+    else:
+        logging.info(f"Order placed successfully for {symbol}")
+
+# Listen for new messages from specific Telegram channels
+async def start_telegram_client():
+    @client.on(events.NewMessage(chats=channel_ids))
+    async def handler(event):
+        message = event.message.message
+        logging.info(f"Received message: {message}")
+        signal = parse_signal(message)
+        if signal:
+            logging.info(f"Received signal: {signal}")
+            place_order(signal)
+
     await client.run_until_disconnected()
 
-# Start the client and run the main coroutine
+# Main function
 if __name__ == "__main__":
-    logging.info("Starting the client...")
-    client.start()  # Ensure the client is started
-    client.loop.run_until_complete(main())
+    # Start MetaTrader 5
+    mt5_initialize()
+
+    # Start Telegram client
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(initialize_telegram_client())
+    loop.run_until_complete(start_telegram_client())
