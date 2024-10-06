@@ -49,9 +49,6 @@ async def initialize_telegram_client():
         await client.start()
         logging.info("Telegram client successfully started after regenerating session string.")
 
-# Channel IDs to monitor
-channel_ids = [1882105856, 1316632057]
-
 # Initialize MetaTrader 5 connection
 RETRY_LIMIT = 5
 
@@ -129,12 +126,13 @@ def place_order(signal):
     else:
         logging.info(f"Order placed successfully for {symbol}")
 
-# Listen for new messages from specific Telegram channels
+# Listen for new messages from any Telegram channel
 async def start_telegram_client():
-    @client.on(events.NewMessage(chats=channel_ids))
+    @client.on(events.NewMessage)
     async def handler(event):
         message = event.message.message
-        logging.info(f"Received message: {message}")
+        chat = await event.get_chat()
+        logging.info(f"Received message from chat '{chat.title}' (ID: {chat.id}): {message}")
         signal = parse_signal(message)
         if signal:
             logging.info(f"Received signal: {signal}")
