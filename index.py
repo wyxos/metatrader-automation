@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv, set_key
 import asyncio
 import logging
+import time
 
 # Load environment variables
 load_dotenv()
@@ -40,25 +41,40 @@ async def initialize_telegram_client():
     try:
         client = TelegramClient(StringSession(session_string), api_id, api_hash)
         await client.start()
+        logging.info("Telegram client successfully started.")
     except Exception as e:
         logging.error(f"Error: {e}. Regenerating session string...")
         session_string = await regenerate_session()
         client = TelegramClient(StringSession(session_string), api_id, api_hash)
         await client.start()
+        logging.info("Telegram client successfully started after regenerating session string.")
 
 # Channel IDs to monitor
 channel_ids = [1882105856, 1316632057]
 
 # Initialize MetaTrader 5 connection
+RETRY_LIMIT = 5
+
 def mt5_initialize():
-    if not mt5.initialize():
-        logging.error("MetaTrader5 initialization failed. Error code: %s", mt5.last_error())
-        mt5.shutdown()
-    login = mt5.login(mt5_account, password=mt5_password, server=mt5_server)
-    if not login:
-        logging.error("Failed to connect to MT5 account. Error code: %s", mt5.last_error())
-    else:
-        logging.info("Connected to MT5 account")
+    logging.info("Initializing MetaTrader 5...")
+    retries = 0
+    while retries < RETRY_LIMIT:
+        if mt5.initialize(timeout=5000):
+            login = mt5.login(mt5_account, password=mt5_password, server=mt5_server)
+            if login:
+                logging.info("Connected to MT5 account")
+                return True
+            else:
+                logging.error("Failed to connect to MT5 account. Error code: %s", mt5.last_error())
+        else:
+            logging.error("MetaTrader5 initialization failed. Error code: %s", mt5.last_error())
+
+        retries += 1
+        logging.info(f"Retrying MetaTrader 5 initialization ({retries}/{RETRY_LIMIT})...")
+        time.sleep(5)  # Wait for a while before retrying
+
+    mt5.shutdown()
+    return False
 
 # Process message to extract trade details
 def parse_signal(message):
@@ -105,6 +121,7 @@ def place_order(signal):
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
 
+    logging.info(f"Placing order for {symbol}: {action} at {price}, TP: {tp}, SL: {sl}")
     # Send the order
     result = mt5.order_send(request)
     if result.retcode != mt5.TRADE_RETCODE_DONE:
@@ -123,15 +140,17 @@ async def start_telegram_client():
             logging.info(f"Received signal: {signal}")
             place_order(signal)
 
+    logging.info("Telegram client is now listening for new messages...")
     await client.run_until_disconnected()
 
 # Main function
 if __name__ == "__main__":
     # Start MetaTrader 5
-    mt5_initialize()
-
-    # Start Telegram client
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(initialize_telegram_client())
-    loop.run_until_complete(start_telegram_client())
+    if mt5_initialize():
+        # Start Telegram client
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(initialize_telegram_client())
+        loop.run_until_complete(start_telegram_client())
+    else:
+        logging.error("MT5 initialization failed after multiple attempts. Exiting script.")
