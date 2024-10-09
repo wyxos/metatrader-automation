@@ -126,9 +126,19 @@ def place_order(signal):
     else:
         logging.info(f"Order placed successfully for {symbol}")
 
-# Listen for new messages from any Telegram channel
+# List of specific channel IDs to monitor
+from_chats = [
+    1882105856, 1316632057, 1925709440, 1622798974, 1619062611,
+    2069311392, 1986643106, 1945187058, 1792592079, 1753932904,
+    1447871772, 1240559594, 1924713375, 1972491378, 1840185808,
+    1569743424, 1594662743, 1894282005, 1898607875, 1633769909,
+    1253126344, 1206081401, 1835439118, 1967476990, 1983270625,
+    1555470470, 1799805861, 2041761858, 1452557919, 1979329330
+]
+
+# Listen for new messages from specific Telegram channels
 async def start_telegram_client():
-    @client.on(events.NewMessage)
+    @client.on(events.NewMessage(chats=from_chats))
     async def handler(event):
         message = event.message.message
         chat = await event.get_chat()
