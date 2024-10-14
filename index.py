@@ -75,14 +75,17 @@ def mt5_initialize():
 
 # Process message to extract trade details
 def parse_signal(message):
+    logging.info(f"Parsing message: {message}")
     pattern = r'(BUY|SELL)\s+(NOW\s+)?([A-Z]+|[A-Z]+/[A-Z]+|[A-Z]+\d+)\s+(\d+(\.\d+)?)\s+TP\s+(\d+(\.\d+)?)\s+SL\s+(\d+(\.\d+)?)'
     match = re.search(pattern, message, re.IGNORECASE)
     if match:
+        logging.info("Valid trade signal found.")
         action = match.group(1).upper()
         symbol = match.group(3).upper()
         price = float(match.group(4))
         tp = float(match.group(6))
         sl = float(match.group(8))
+        logging.info(f"Parsed trade parameters - Action: {action}, Symbol: {symbol}, Price: {price}, TP: {tp}, SL: {sl}")
         return {
             'action': action,
             'symbol': symbol,
@@ -128,12 +131,12 @@ def place_order(signal):
 
 # List of specific channel IDs to monitor
 from_chats = [
-    1882105856, 1316632057, 1925709440, 1622798974, 1619062611,
-    2069311392, 1986643106, 1945187058, 1792592079, 1753932904,
-    1447871772, 1240559594, 1924713375, 1972491378, 1840185808,
-    1569743424, 1594662743, 1894282005, 1898607875, 1633769909,
-    1253126344, 1206081401, 1835439118, 1967476990, 1983270625,
-    1555470470, 1799805861, 2041761858, 1452557919, 1979329330
+   1001835439118, 1001929659163, 1001967476990, 1001433646525, 1001452557919,
+    1001945187058, 1001206081401, 1001240559594, 1001388233385, 1001792592079,
+    1001622798974, 1001555470470, 1001925709440, 1001230054900, 1001610297526,
+    1001569845383, 1001891409421, 1001894282005, 1001807278108, 1001972491378,
+    1001253126344, 1001092443297, 1001799805861, 1001983270625, 1002188561438,
+    1001898607875, 1002041761858, 1001986643106, 1001633769909, 1001924713375
 ]
 
 # Listen for new messages from specific Telegram channels
@@ -149,6 +152,7 @@ async def start_telegram_client():
             place_order(signal)
 
     logging.info("Telegram client is now listening for new messages...")
+    logging.info("Waiting for valid trade signals...")
     await client.run_until_disconnected()
 
 # Main function
