@@ -7,6 +7,8 @@ from dotenv import load_dotenv, set_key
 import asyncio
 import logging
 import time
+import json
+
 
 # Load environment variables
 load_dotenv()
@@ -143,12 +145,30 @@ from_chats = [
 async def start_telegram_client():
     @client.on(events.NewMessage(chats=from_chats))
     async def handler(event):
-        # Write message to log file
+        chat = await event.get_chat()
+        message = event.message.message
+        # Write message to JSON log file
         log_dir = './logs'
         os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, f"{time.strftime('%Y-%m-%d')}.log")
-        with open(log_file, 'a', encoding='utf-8') as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] - Channel: {chat.title} - Message: \"{message}\"\n")
+        log_file = os.path.join(log_dir, f"{time.strftime('%Y-%m-%d')}.json")
+
+        log_entry = {
+            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
+            "channel": chat.title,
+            "message": message
+        }
+
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                logs = json.load(f)
+        else:
+            logs = []
+
+        logs.append(log_entry)
+
+        with open(log_file, 'w', encoding='utf-8') as f:
+            json.dump(logs, f, ensure_ascii=False, indent=4)
+
         chat = await event.get_chat()
         message = event.message.message
         logging.info(f"Received message from chat '{chat.title}' (ID: {chat.id}): {message}")
