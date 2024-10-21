@@ -5,16 +5,14 @@ import MetaTrader5 as mt5
 import os
 from dotenv import load_dotenv, set_key
 import asyncio
-import logging
-import time
+import sqlite3
 import json
-
+import time
+import requests
+import logging
 
 # Load environment variables
 load_dotenv()
-
-# Configure logging to show INFO level messages
-logging.basicConfig(level=logging.INFO)
 
 # Telegram API credentials
 api_id = os.getenv('TELEGRAM_API_ID')
@@ -26,7 +24,33 @@ mt5_account = int(os.getenv('MT5_ACCOUNT'))  # Your MetaTrader Account Number
 mt5_password = os.getenv('MT5_PASSWORD')
 mt5_server = os.getenv('MT5_SERVER')
 
+# Ollama API configuration
+OLLAMA_API_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL_NAME = "llama3.2"
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 client = None
+
+# SQLite database setup
+db_file = 'telegram_mt5_logs.db'
+conn = sqlite3.connect(db_file)
+cursor = conn.cursor()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        channel TEXT,
+        message TEXT,
+        created_at TEXT,
+        is_valid_trade INTEGER,
+        parameters TEXT,
+        processed_at TEXT,
+        failed_at TEXT,
+        exception TEXT
+    )
+''')
+conn.commit()
 
 # Function to generate a new session string and update .env
 async def regenerate_session():
@@ -34,7 +58,6 @@ async def regenerate_session():
         await new_client.start()
         new_session_string = new_client.session.save()
         set_key('.env', 'TELEGRAM_SESSION_STRING', new_session_string)
-        logging.info(f"Session string regenerated and saved to .env: {new_session_string[:10]}... (truncated)")
         return new_session_string
 
 # Initialize Telegram client
@@ -43,58 +66,51 @@ async def initialize_telegram_client():
     try:
         client = TelegramClient(StringSession(session_string), api_id, api_hash)
         await client.start()
-        logging.info("Telegram client successfully started.")
+        logging.info("Successfully connected to Telegram.")
     except Exception as e:
-        logging.error(f"Error: {e}. Regenerating session string...")
         session_string = await regenerate_session()
         client = TelegramClient(StringSession(session_string), api_id, api_hash)
         await client.start()
-        logging.info("Telegram client successfully started after regenerating session string.")
+        logging.info("Successfully connected to Telegram after regenerating session string.")
 
 # Initialize MetaTrader 5 connection
 RETRY_LIMIT = 5
 
 def mt5_initialize():
-    logging.info("Initializing MetaTrader 5...")
     retries = 0
     while retries < RETRY_LIMIT:
         if mt5.initialize(timeout=5000):
             login = mt5.login(mt5_account, password=mt5_password, server=mt5_server)
             if login:
-                logging.info("Connected to MT5 account")
+                logging.info("Successfully connected to MetaTrader 5.")
                 return True
             else:
-                logging.error("Failed to connect to MT5 account. Error code: %s", mt5.last_error())
+                retries += 1
+                time.sleep(5)
         else:
-            logging.error("MetaTrader5 initialization failed. Error code: %s", mt5.last_error())
-
-        retries += 1
-        logging.info(f"Retrying MetaTrader 5 initialization ({retries}/{RETRY_LIMIT})...")
-        time.sleep(5)  # Wait for a while before retrying
+            retries += 1
+            time.sleep(5)
 
     mt5.shutdown()
+    logging.error("Failed to initialize MetaTrader 5 after multiple attempts.")
     return False
 
-# Process message to extract trade details
-def parse_signal(message):
-    logging.info(f"Parsing message: {message}")
-    pattern = r'(BUY|SELL)\s+(NOW\s+)?([A-Z]+|[A-Z]+/[A-Z]+|[A-Z]+\d+)\s+(\d+(\.\d+)?)\s+TP\s+(\d+(\.\d+)?)\s+SL\s+(\d+(\.\d+)?)'
-    match = re.search(pattern, message, re.IGNORECASE)
-    if match:
-        logging.info("Valid trade signal found.")
-        action = match.group(1).upper()
-        symbol = match.group(3).upper()
-        price = float(match.group(4))
-        tp = float(match.group(6))
-        sl = float(match.group(8))
-        logging.info(f"Parsed trade parameters - Action: {action}, Symbol: {symbol}, Price: {price}, TP: {tp}, SL: {sl}")
-        return {
-            'action': action,
-            'symbol': symbol,
-            'price': price,
-            'tp': tp,
-            'sl': sl
-        }
+# Function to validate trade signal using Ollama LLM
+def validate_trade_signal(message):
+    payload = {
+        "model": OLLAMA_MODEL_NAME,
+        "prompt": f"Is the following message a valid trade signal? If yes, extract the action, symbol, price, tp, and sl as a JSON object. Message: '{message}'"
+    }
+    try:
+        response = requests.post(OLLAMA_API_URL, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'text' in data:
+            return json.loads(data['text'])
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error communicating with Ollama API: {e}")
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding Ollama API response: {e}")
     return None
 
 # Place order in MetaTrader 5
@@ -123,13 +139,12 @@ def place_order(signal):
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
 
-    logging.info(f"Placing order for {symbol}: {action} at {price}, TP: {tp}, SL: {sl}")
     # Send the order
     result = mt5.order_send(request)
     if result.retcode != mt5.TRADE_RETCODE_DONE:
-        logging.error(f"Failed to place order: {result.retcode}. Error: {result.comment}")
+        raise Exception(f"Failed to place order: {result.retcode}. Error: {result.comment}")
     else:
-        logging.info(f"Order placed successfully for {symbol}")
+        logging.info(f"Order placed successfully for record with ID {signal['id']} at {time.strftime('%Y-%m-%d %H:%M:%S')}.")
 
 # List of specific channel IDs to monitor
 from_chats = [
@@ -147,38 +162,30 @@ async def start_telegram_client():
     async def handler(event):
         chat = await event.get_chat()
         message = event.message.message
-        # Write message to JSON log file
-        log_dir = './logs'
-        os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, f"{time.strftime('%Y-%m-%d')}.json")
+        created_at = time.strftime('%Y-%m-%d %H:%M:%S')
+        is_valid_trade = 0
+        parameters = None
+        processed_at = None
+        failed_at = None
+        exception = None
 
-        log_entry = {
-            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
-            "channel": chat.title,
-            "message": message
-        }
+        try:
+            signal = validate_trade_signal(message)
+            if signal:
+                is_valid_trade = 1
+                parameters = json.dumps(signal)
+                place_order(signal)
+                processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception as e:
+            failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+            exception = json.dumps({'error': str(e)})
 
-        if os.path.exists(log_file):
-            with open(log_file, 'r', encoding='utf-8') as f:
-                logs = json.load(f)
-        else:
-            logs = []
+        cursor.execute('''
+            INSERT INTO logs (channel, message, created_at, is_valid_trade, parameters, processed_at, failed_at, exception)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (chat.title, message, created_at, is_valid_trade, parameters, processed_at, failed_at, exception))
+        conn.commit()
 
-        logs.append(log_entry)
-
-        with open(log_file, 'w', encoding='utf-8') as f:
-            json.dump(logs, f, ensure_ascii=False, indent=4)
-
-        chat = await event.get_chat()
-        message = event.message.message
-        logging.info(f"Received message from chat '{chat.title}' (ID: {chat.id}): {message}")
-        signal = parse_signal(message)
-        if signal:
-            logging.info(f"Received signal: {signal}")
-            place_order(signal)
-
-    logging.info("Telegram client is now listening for new messages...")
-    logging.info("Waiting for valid trade signals...")
     await client.run_until_disconnected()
 
 # Main function
@@ -191,4 +198,11 @@ if __name__ == "__main__":
         loop.run_until_complete(initialize_telegram_client())
         loop.run_until_complete(start_telegram_client())
     else:
-        logging.error("MT5 initialization failed after multiple attempts. Exiting script.")
+        cursor.execute('''
+            INSERT INTO logs (channel, message, created_at, is_valid_trade, parameters, processed_at, failed_at, exception)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', ('System', 'MT5 initialization failed', time.strftime('%Y-%m-%d %H:%M:%S'), 0, None, None, time.strftime('%Y-%m-%d %H:%M:%S'), json.dumps({'error': 'MT5 initialization failed after multiple attempts.'})))
+        conn.commit()
+
+# Close SQLite connection
+conn.close()
