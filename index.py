@@ -10,6 +10,7 @@ import json
 import time
 import requests
 import logging
+from validate_trade_signal import validate_trade_signal
 
 # Load environment variables
 load_dotenv()
@@ -23,10 +24,6 @@ session_string = os.getenv('TELEGRAM_SESSION_STRING')
 mt5_account = int(os.getenv('MT5_ACCOUNT'))  # Your MetaTrader Account Number
 mt5_password = os.getenv('MT5_PASSWORD')
 mt5_server = os.getenv('MT5_SERVER')
-
-# Ollama API configuration
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL_NAME = "llama3.2"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -94,24 +91,6 @@ def mt5_initialize():
     mt5.shutdown()
     logging.error("Failed to initialize MetaTrader 5 after multiple attempts.")
     return False
-
-# Function to validate trade signal using Ollama LLM
-def validate_trade_signal(message):
-    payload = {
-        "model": OLLAMA_MODEL_NAME,
-        "prompt": f"Is the following message a valid trade signal? If yes, extract the action, symbol, price, tp, and sl as a JSON object. Message: '{message}'"
-    }
-    try:
-        response = requests.post(OLLAMA_API_URL, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        if 'text' in data:
-            return json.loads(data['text'])
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error communicating with Ollama API: {e}")
-    except json.JSONDecodeError as e:
-        logging.error(f"Error decoding Ollama API response: {e}")
-    return None
 
 # Place order in MetaTrader 5
 def place_order(signal):
