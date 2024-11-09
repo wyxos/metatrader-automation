@@ -4,3 +4,6 @@ node_modules
 *.session-journal
 *.log
 logs
+*.db
+ollama_response.txt
+/.idea
