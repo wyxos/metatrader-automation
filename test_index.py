@@ -6,9 +6,7 @@ class TestProcessString(unittest.TestCase):
     def test_process_string(self):
         input_str = "Hello, this is a test string."
         expected_output = {
-            "original_string": input_str,
-            "word_count": 6,
-            "char_count": 29
+            "symbol": ""
         }
 
         result_json = validate_trade_signal(input_str)
@@ -16,12 +14,10 @@ class TestProcessString(unittest.TestCase):
 
         self.assertEqual(result_dict, expected_output)
 
-    def test_empty_string(self):
-        input_str = ""
+    def test_trade_signal_gold(self):
+        input_str = "GOLD BUY NOW @2730-2727\n\nSL 2724\n\nTP 2732.54\nTP 2737.95\n\nLayering slowly use proper lot size"
         expected_output = {
-            "original_string": input_str,
-            "word_count": 0,
-            "char_count": 0
+            "symbol": "GOLD"
         }
 
         result_json = validate_trade_signal(input_str)
@@ -29,12 +25,10 @@ class TestProcessString(unittest.TestCase):
 
         self.assertEqual(result_dict, expected_output)
 
-    def test_string_with_only_spaces(self):
-        input_str = "     "
+    def test_trade_signal_gbpjpy(self):
+        input_str = "GBPJPY BUY @197.250\n\nSL  196.500\n\nTP 198.100"
         expected_output = {
-            "original_string": input_str,
-            "word_count": 0,
-            "char_count": 5
+            "symbol": "GBPJPY"
         }
 
         result_json = validate_trade_signal(input_str)
