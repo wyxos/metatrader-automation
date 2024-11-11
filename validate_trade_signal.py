@@ -32,30 +32,35 @@ def validate_trade_signal(input_string):
             f"Ensure that the response is a JSON object containing only the extracted attributes.\n"
             f"Price range can be separated by '-' or space and is usually after the signal or an @ sign, in such events, return an array for the price attribute.\n"
             f"Return a JSON containing the attributes extracted without any other text. Example: {example}\n"
-            f"Here's the input: {string}."
+            f"Here's the input: {string}. Return only a JSON without any accompanying text."
         )
     )
 
     json.dumps(response, indent=4)
 
     # Create a dictionary with the results
-    try:
-        result = json.loads(response['response'])
-    except (KeyError, json.JSONDecodeError) as e:
-        return json.dumps({"error": f"Failed to parse response: {str(e)}"}, indent=4)
+    result = json.loads(response['response'])
 
-    # Convert the dictionary to a JSON object
-    result_json = json.dumps(result, indent=4)
-    return result_json
+    return result
 
 # Example usage
 if __name__ == "__main__":
+#     input_str = """
+#     GOLD BUY NOW @2730-2727
+#     SL 2724
+#     TP 2732.54
+#     TP 2737.95
+#     Layering slowly use proper lot size
+#     """
+
     input_str = """
-    GOLD BUY NOW @2730-2727
-    SL 2724
-    TP 2732.54
-    TP 2737.95
-    Layering slowly use proper lot size
+    GBPJPY BUY NOW @ 194.752 - 194.327
+
+    SL : 194.022
+
+    TP 1 : 194.931
+    TP 2 : 195.932
     """
+
     processed_json = validate_trade_signal(input_str)
     print(processed_json)

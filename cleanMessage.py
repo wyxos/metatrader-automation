@@ -1,6 +1,7 @@
 import json
 import sys
 import re
+from currencies import currencies
 
 def removeEmoticons(input_string):
     # Regex pattern to match emoticons commonly used in WhatsApp/Telegram
@@ -20,6 +21,11 @@ def cleanMessage(input_string):
     cleaned_string = re.sub(r' {2,}', ' ', cleaned_string)
     # Strip leading and trailing spaces
     cleaned_string = cleaned_string.strip()
+
+    # Replace common currency symbols with standard symbols
+    for key, value in currencies().items():
+        cleaned_string = cleaned_string.replace(key.lower(), value)
+
     # Convert the cleaned input string to a dictionary format
     result = {
         "input": cleaned_string
