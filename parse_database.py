@@ -1,81 +1,50 @@
 import sqlite3
 import json
-import logging
-import time
 from validate_trade_signal import validate_trade_signal
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+def main():
+    # Connect to the SQLite database
+    db_path = 'telegram_mt5_logs.db'
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
 
-def process_database_records():
     try:
-        # Connect to the SQLite database
-        conn = sqlite3.connect('telegram_mt5_logs.db')
-        cursor = conn.cursor()
+        # Fetch all rows from the 'logs' table
+        cursor.execute("SELECT rowid, message FROM logs")
+        rows = cursor.fetchall()
 
-        # Select all records from the logs table
-        cursor.execute("SELECT id, message FROM logs")
-        records = cursor.fetchall()
-
-        # Check if records exist
-        if not records:
-            logging.info("No records found in the logs table.")
-            return
-
-        # Iterate through each record and process the message column
-        for record in records:
-            record_id, message = record
-            logging.info(f"Processing record ID: {record_id}")
+        for row in rows:
+            rowid, message = row
 
             try:
-                parameters = validate_trade_signal(message)
-                # parameters is expected to be a JSON string
-                parameters_dict = json.loads(parameters)
+                # Call validate_trade_signal for each message
+                trade_signal = validate_trade_signal(message)
+                trade_signal_json = json.dumps(trade_signal)
 
-                if isinstance(parameters_dict, dict) and "error" not in parameters_dict:
-                    is_valid_trade = 1
-                else:
-                    is_valid_trade = 0
-                    logging.warning(f"Failed to extract valid parameters for record ID {record_id}: {parameters_dict.get('error', 'Unknown error')}" )
-                    parameters = None  # Set parameters to None if there is an error
-
-                logging.info(f"Extracted parameters for record ID {record_id}: {parameters}")
-
-                # Update the parameters and is_valid_trade columns in the logs table
+                # If successful, update the columns is_valid_trade and parameters
                 cursor.execute(
-                    "UPDATE logs SET parameters = ?, is_valid_trade = ? WHERE id = ?",
-                    (parameters, is_valid_trade, record_id)
+                    "UPDATE logs SET is_valid_trade = ?, parameters = ? WHERE rowid = ?",
+                    (1, trade_signal_json, rowid)
                 )
-            except json.JSONDecodeError:
-                logging.error(f"Invalid JSON format for record ID {record_id}: {parameters}")
-                # Set is_valid_trade to 0 if JSON is invalid
-                cursor.execute(
-                    "UPDATE logs SET is_valid_trade = ?, parameters = ? WHERE id = ?",
-                    (0, None, record_id)
-                )
+                print(f"Successfully processed row {rowid}")
+
             except Exception as e:
-                logging.error(f"Error processing record ID {record_id}: {e}")
-                # Set is_valid_trade to 0 if processing failed
+                # If an exception occurs, update the exception column
                 cursor.execute(
-                    "UPDATE logs SET is_valid_trade = ?, parameters = ? WHERE id = ?",
-                    (0, None, record_id)
+                    "UPDATE logs SET exception = ? WHERE rowid = ?",
+                    (str(e), rowid)
                 )
+                print(f"Failed to process row {rowid}: {e}")
 
-        # Commit changes and close the connection
-        conn.commit()
-        logging.info("Finished processing all records.")
-    except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
+        # Commit all changes to the database
+        connection.commit()
+
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
+        print(f"An error occurred while accessing the database: {e}")
+
     finally:
-        if conn:
-            conn.close()
-            logging.info("Database connection closed.")
+        # Close the database connection
+        connection.close()
 
 if __name__ == "__main__":
-    while True:
-        try:
-            process_database_records()
-        except Exception as e:
-            logging.er
+    main()
