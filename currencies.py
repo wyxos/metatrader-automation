@@ -37,6 +37,7 @@ def currencies():
        'SP500': 'SP500',
        'US30': 'DJ30',
        'USDCAD': 'USDCAD',
+       "USD/CAD": "USDCAD",
        'USDCHF': 'USDCHF',
        'USDJPY': 'USDJPY',
        'XAGUSD': 'XAGUSD',

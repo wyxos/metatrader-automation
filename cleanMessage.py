@@ -9,8 +9,15 @@ def removeEmoticons(input_string):
     return re.sub(emoticon_pattern, '', input_string)
 
 def cleanMessage(input_string):
+    # Remove non-breaking hyphens and dashes from the input string
+    cleaned_string = re.sub(r"[\u2012-\u2015]+", "", input_string)
+
+    # Remove @ signs and replace with a single space
+    cleaned_string = re.sub(r'@', ' ', cleaned_string)
+
+
     # Remove emoticons from the input string
-    cleaned_string = removeEmoticons(input_string)
+    cleaned_string = removeEmoticons(cleaned_string)
     # Convert all characters to lowercase
     cleaned_string = cleaned_string.lower()
     # Remove the word 'now' accounting for spaces
@@ -26,12 +33,20 @@ def cleanMessage(input_string):
     for key, value in currencies().items():
         cleaned_string = cleaned_string.replace(key.lower(), value)
 
-    # Convert the cleaned input string to a dictionary format
-    result = {
-        "input": cleaned_string
-    }
+    # Sometimes 'tp' is written as 'take profit', replace it with 'tp'
+    cleaned_string = re.sub(r'\btake profit\b', 'tp', cleaned_string)
+
+    # Sometimes 'sl' is written as 'stop loss', replace it with 'sl'
+    cleaned_string = re.sub(r'\bstop loss\b', 'sl', cleaned_string)
+
+    # Sometimes tp are supplied with multiple tp 1 xxxx tp 2 xxxx tp 3 xxxx, replace the tp and the number with just tp
+    cleaned_string = re.sub(r'\btp \d\b', 'tp', cleaned_string)
+
+    # Sometimes it's written as tp1, tp2, tp3
+    cleaned_string = re.sub(r'\btp\d\b', 'tp', cleaned_string)
+
     # Convert the dictionary to a JSON string
-    return json.dumps(result, indent=4)
+    return cleaned_string
 
 def main():
     if len(sys.argv) < 2:
