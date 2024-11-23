@@ -7,6 +7,7 @@ import asyncio
 import sqlite3
 import time
 import logging
+import json
 from cleanMessage import cleanMessage
 from validateOrder import validateOrder
 from sendOrder import sendOrder
@@ -33,6 +34,9 @@ cursor.execute('''
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         channel TEXT,
         message TEXT,
+        parameters TEXT,
+        trade_response TEXT,
+        exception TEXT,
         created_at TEXT
     )
 ''')
@@ -72,39 +76,14 @@ from_chats = [
 # Listen for new messages from specific Telegram channels
 async def start_telegram_client():
     @client.on(events.NewMessage(chats=from_chats))
-    async def handler(event):
-        chat = await event.get_chat()
+     async def handler(event):
         message = event.message.message
-
-        # if no message, continue
         if not message:
-            print('No message found.')
+            logging.info('No message found.')
             return
 
-        message = cleanMessage(message)
-
-        # Log the message received
-        logging.info(f"Message received from {chat.title}: {message}")
-
-        created_at = time.strftime('%Y-%m-%d %H:%M:%S')
-
-        cursor.execute('''
-            INSERT INTO logs (channel, message, created_at)
-            VALUES (?, ?, ?)
-        ''', (chat.title, message, created_at))
-        conn.commit()
-
-        try:
-            json = validateOrder(message)
-
-            # tp attribute in json is array, for each tp value, send an order
-            for tp in json['tp']:
-                json['tp'] = tp
-                await sendOrder(json, tp)
-
-
-        except Exception as e:
-            logging.error(f"Error validating order: {e}")
+        # Process the message
+        process_message(message)
 
     await client.run_until_disconnected()
 
