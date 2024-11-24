@@ -11,6 +11,7 @@ import json
 from cleanMessage import cleanMessage
 from validateOrder import validateOrder
 from sendOrder import sendOrder
+from processMessage import process_message
 
 # Load environment variables
 load_dotenv()
@@ -76,7 +77,7 @@ from_chats = [
 # Listen for new messages from specific Telegram channels
 async def start_telegram_client():
     @client.on(events.NewMessage(chats=from_chats))
-     async def handler(event):
+    async def handler(event):
         message = event.message.message
         if not message:
             logging.info('No message found.')

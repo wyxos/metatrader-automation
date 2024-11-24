@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs Viewer</title>
+    <script>
+        // Fetch logs every 5 seconds
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/logs');
+                const logs = await response.json();
+
+                const logsTable = document.getElementById('logs-table-body');
+                logsTable.innerHTML = ''; // Clear existing rows
+
+                logs.forEach(log => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${log.id}</td>
+                        <td>${log.channel}</td>
+                        <td>${log.message}</td>
+                        <td>${log.created_at}</td>
+                        <td>${log.is_valid_trade}</td>
+                        <td>${log.parameters}</td>
+                        <td>${log.processed_at}</td>
+                        <td>${log.failed_at}</td>
+                        <td>${log.exception}</td>
+                        <td>${log.trade_response}</td>
+                    `;
+
+                    logsTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+            }
+        }
+
+        // Start fetching logs when the page loads
+        window.onload = () => {
+            fetchLogs();
+            setInterval(fetchLogs, 5000); // Fetch every 5 seconds
+        };
+    </script>
+</head>
+<body>
+<h1>Logs Viewer</h1>
+<table border="1">
+    <thead>
+    <tr>
+        <th>id</th>
+        <th>channel</th>
+        <th>message</th>
+        <th>created_at</th>
+        <th>is_valid_trade</th>
+        <th>parameters</th>
+        <th>processed_at</th>
+        <th>failed_at</th>
+        <th>exception</th>
+        <th>trade_response</th>
+    </tr>
+    </thead>
+    <tbody id="logs-table-body">
+    <!-- Logs will be dynamically populated here -->
+    </tbody>
+</table>
+</body>
+</html>
