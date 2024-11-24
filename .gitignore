@@ -6,4 +6,5 @@ node_modules
 logs
 *.db
 ollama_response.txt
-/.idea
+.idea
+.idea/
