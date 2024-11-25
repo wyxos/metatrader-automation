@@ -61,11 +61,13 @@ def validateOrder(message):
 # Example usage
 if __name__ == "__main__":
     messages = [
-        "XAUUSD buy 2570 - 2567 sl: 2564 tp: 2572 tp: 2574 tp: 2576 tp: open",
-        "XAUUSD sell 2571 tp 2569 tp 2568 tp 2567 tp 2556 sl 2586",
-        "GBPCAD sell 1.78050 sl 1.78450 tp.77400",
-        "NZDUSD sell 0.58740 sl 0.58900 tp.58600 tp.58450",
-        "XAUUSD buy : 2569 - 2566 sl : 2563 tp : 2575 tp : 2580"
+#         "XAUUSD buy 2570 - 2567 sl: 2564 tp: 2572 tp: 2574 tp: 2576 tp: open",
+#         "XAUUSD sell 2571 tp 2569 tp 2568 tp 2567 tp 2556 sl 2586",
+#         "GBPCAD sell 1.78050 sl 1.78450 tp.77400",
+#         "NZDUSD sell 0.58740 sl 0.58900 tp.58600 tp.58450",
+#         "XAUUSD buy : 2569 - 2566 sl : 2563 tp : 2575 tp : 2580"
+#         "XAUUSD sell (2668.5- 2670.5) tp1: 2667 tp2: 2663 stop loss: 2673.5"
+          "XAUUSD sell 2672-2675 stoploss point : 2677 take profit 1. :2669 take profit 2 :2666 take profit 3 :2663"
     ]
 
     for msg in messages:
