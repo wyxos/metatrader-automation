@@ -8,3 +8,4 @@ logs
 ollama_response.txt
 .idea
 .idea/
+src/__pycache__
