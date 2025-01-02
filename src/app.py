@@ -1,15 +1,19 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
+from fetchChannels import list_and_save_channels
 import sqlite3
 
 app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
 DB_FILE = 'telegram_mt5_logs.db'
+
+list_and_save_channels()
 
 # Route to fetch logs as JSON
 @app.route('/logs', methods=['GET'])
 def get_logs():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')')
+#     cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')
+    cursor.execute('SELECT * FROM logs ORDER BY created_at DESC')
     rows = cursor.fetchall()
     conn.close()
 
@@ -50,6 +54,16 @@ def get_channels():
         for row in rows
     ]
     return jsonify(channels)
+
+@app.route('/channel', methods=['PATCH'])
+# Route to enable or disable a channel by ID received in request
+def update_channel():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE channels SET enabled = NOT enabled WHERE id = ?', (request.json['id'],))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Channel updated successfully'})
 
 # Route to render HTML page
 @app.route('/')
