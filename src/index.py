@@ -90,10 +90,11 @@ async def initialize_telegram_client():
 def get_enabled_channels():
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
-    cursor.execute("SELECT telegram_id FROM channels WHERE enabled = 1")
+    # Use REPLACE to remove '-' from telegram_id
+    cursor.execute("SELECT REPLACE(telegram_id, '-', '') AS cleaned_id FROM channels WHERE enabled = 1")
     rows = cursor.fetchall()
     conn.close()
-    return [row[0] for row in rows]
+    return [int(row[0]) for row in rows]  # Convert to integers if necessary
 
 async def start_telegram_client():
 #     @client.on(events.NewMessage(chats=from_chats))  # Automatically filters messages by `from_chats`
