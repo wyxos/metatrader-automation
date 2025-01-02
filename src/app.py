@@ -12,8 +12,8 @@ list_and_save_channels()
 def get_logs():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-#     cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')
-    cursor.execute('SELECT * FROM logs ORDER BY created_at DESC')
+    cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')
+#     cursor.execute('SELECT * FROM logs ORDER BY created_at DESC')
     rows = cursor.fetchall()
     conn.close()
 
