@@ -48,10 +48,10 @@ const scrollTop = () => {
       <div>
         <ul class="grid grid-cols-2 w-full text-center">
           <li>
-            <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'logs'" :class="{'bg-blue-500' : tab === 'logs'}">Logs</button>
+            <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'logs'" :class="{'!bg-blue-500' : tab === 'logs'}">Logs</button>
           </li>
           <li>
-            <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'channels'" :class="{'bg-blue-500' : tab === 'channels'}">Channels</button>
+            <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'channels'" :class="{'!bg-blue-500' : tab === 'channels'}">Channels</button>
           </li>
         </ul>
 
@@ -68,7 +68,9 @@ const scrollTop = () => {
             <tr v-for="channel in channels" :key="channel.id">
               <td class="border px-4 py-2">{{ channel.name }}</td>
               <td class="border px-4 py-2">{{ channel.telegram_id }}</td>
-              <td class="border px-4 py-2">{{ channel.enabled }}</td>
+              <td class="border px-4 py-2">
+                <o-switch v-model="channel.enabled" :true-value="1" :false-value="0" @change="() => axios.patch('/channel', {id: channel.id, enabled: channel.enabled})"></o-switch>
+              </td>
             </tr>
             </tbody>
           </table>
