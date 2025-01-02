@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, render_template
 import sqlite3
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
 DB_FILE = 'telegram_mt5_logs.db'
 
 # Route to fetch logs as JSON
@@ -9,7 +9,7 @@ DB_FILE = 'telegram_mt5_logs.db'
 def get_logs():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM logs ORDER BY created_at DESC')
+    cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')')
     rows = cursor.fetchall()
     conn.close()
 
@@ -30,6 +30,26 @@ def get_logs():
         for row in rows
     ]
     return jsonify(logs)
+
+@app.route('/channels', methods=['GET'])
+def get_channels():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM channels')
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Convert rows to a list of dictionaries
+    channels = [
+        {
+            'id': row[0],
+            'telegram_id': row[1],
+            'name': row[2],
+            'enabled': row[3]
+        }
+        for row in rows
+    ]
+    return jsonify(channels)
 
 # Route to render HTML page
 @app.route('/')
