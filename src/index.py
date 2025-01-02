@@ -92,7 +92,7 @@ async def start_telegram_client():
         message = event.message.message  # Get the actual message text
         chat_id = chat.id  # Get the chat ID
         chat_title = chat.title  # Get the chat title
-        
+
         # Format the message details into a single line
         log_line = f"Chat ID: {chat_id}, Chat Title: {chat_title}, Message: {message}"
 
@@ -101,7 +101,7 @@ async def start_telegram_client():
 
         # Only process messages if there's a valid message text
         if message:
-            process_message(message)
+            process_message(message, chat_title)
         else:
             logging.info('No message found.')
 

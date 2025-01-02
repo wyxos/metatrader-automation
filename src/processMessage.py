@@ -7,7 +7,7 @@ from validateOrder import validateOrder
 from sendOrder import sendOrder
 
 
-def process_message(message):
+def process_message(message, channel):
     # Database file
     db_file = 'telegram_mt5_logs.db'
 
@@ -68,7 +68,7 @@ def process_message(message):
         cursor.execute('''
             INSERT INTO logs (channel, message, parameters, trade_response, exception, is_valid_trade, processed_at, failed_at, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', ("Telegram Channel", message, parameters, json.dumps(trade_response), exception, is_valid_trade, processed_at, failed_at, created_at))
+        ''', (channel, message, parameters, json.dumps(trade_response), exception, is_valid_trade, processed_at, failed_at, created_at))
         conn.commit()
         record_id = cursor.lastrowid
 
