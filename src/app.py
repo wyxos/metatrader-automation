@@ -1,11 +1,13 @@
 from flask import Flask, jsonify, render_template, request
 from fetchChannels import list_and_save_channels
 import sqlite3
+import asyncio
 
 app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
 DB_FILE = 'telegram_mt5_logs.db'
 
-list_and_save_channels()
+# Properly run the async coroutine
+asyncio.run(list_and_save_channels())
 
 # Route to fetch logs as JSON
 @app.route('/logs', methods=['GET'])
