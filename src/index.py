@@ -14,7 +14,8 @@ from sendOrder import sendOrder
 from processMessage import process_message
 from fetchChannels import list_and_save_channels
 
-list_and_save_channels()
+# Properly run the async coroutine
+asyncio.run(list_and_save_channels())
 
 # Load environment variables
 load_dotenv()
