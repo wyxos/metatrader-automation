@@ -51,9 +51,9 @@ async def list_and_save_channels():
                         'INSERT INTO channels (telegram_id, name) VALUES (?, ?)',
                         (telegram_id, name)
                     )
-                    print(f"Saved Channel: ID {telegram_id}, Name {name}")
-                else:
-                    print(f"Channel already exists: ID {telegram_id}, Name {name}")
+#                     print(f"Saved Channel: ID {telegram_id}, Name {name}")
+#                 else:
+#                     print(f"Channel already exists: ID {telegram_id}, Name {name}")
 
         # Commit the changes
         conn.commit()
