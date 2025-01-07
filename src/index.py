@@ -41,6 +41,7 @@ cursor.execute('''
         exception TEXT,
         created_at TEXT
         processed_at TEXT
+        failed_at TEXT
     )
 ''')
 conn.commit()
