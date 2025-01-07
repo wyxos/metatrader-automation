@@ -97,7 +97,7 @@ async def start_telegram_client():
 
         # Only process messages if there's a valid message text
         if message:
-            process_message(message)
+            process_message(message, chat_title)
         else:
             logging.info('No message found.')
 
