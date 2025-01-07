@@ -40,6 +40,7 @@ cursor.execute('''
         is_valid_trade BOOLEAN,
         exception TEXT,
         created_at TEXT
+        processed_at TEXT
     )
 ''')
 conn.commit()
