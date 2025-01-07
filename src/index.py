@@ -109,6 +109,8 @@ async def start_telegram_client():
 
 # Main function
 if __name__ == "__main__":
+    # clear terminal on Windows
+    os.system('cls')
     # Start Telegram client
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
