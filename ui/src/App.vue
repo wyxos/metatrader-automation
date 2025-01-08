@@ -1,5 +1,4 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
 import axios from 'axios'
 import {onMounted, ref} from "vue";
 
