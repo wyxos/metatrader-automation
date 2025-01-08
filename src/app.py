@@ -2,12 +2,17 @@ from flask import Flask, jsonify, render_template, request
 from fetchChannels import list_and_save_channels
 import sqlite3
 import asyncio
+import subprocess
+import os
 
 app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
 DB_FILE = 'telegram_mt5_logs.db'
 
 # Properly run the async coroutine
 asyncio.run(list_and_save_channels())
+
+# Start index.py in a subprocess
+subprocess.Popen(["python", "src/index.py"])
 
 # Route to fetch logs as JSON
 @app.route('/logs', methods=['GET'])
@@ -73,4 +78,6 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
+    # Clear terminal on Windows
+    os.system('cls' if os.name == 'nt' else 'clear')
     app.run(debug=True, use_reloader=False, port=8000)
