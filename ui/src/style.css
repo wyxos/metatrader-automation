@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+* {
+    transition: all 0.3s;
+}
+
+/* Stripe table */
+@layer base {
+    table {
+        tbody tr:nth-child(odd) {
+            @apply bg-blue-800
+        }
+
+        tbody tr:nth-child(even) {
+            @apply bg-blue-900
+        }
+    }
+}
