@@ -37,9 +37,9 @@ cursor.execute('''
         message TEXT,
         parameters TEXT,
         trade_response TEXT,
-        is_valid_trade BOOLEAN,
+        is_valid_trade INTEGER,
         exception TEXT,
-        created_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         processed_at TEXT,
         failed_at TEXT
     )
