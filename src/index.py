@@ -39,8 +39,8 @@ cursor.execute('''
         trade_response TEXT,
         is_valid_trade BOOLEAN,
         exception TEXT,
-        created_at TEXT
-        processed_at TEXT
+        created_at TEXT,
+        processed_at TEXT,
         failed_at TEXT
     )
 ''')
