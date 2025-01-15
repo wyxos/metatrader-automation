@@ -30,13 +30,13 @@ def get_logs():
             'id': row[0],
             'channel': row[1],
             'message': row[2],
-            'created_at': row[3],
-            'is_valid_trade': row[4],
-            'parameters': row[5],
-            'processed_at': row[6],
-            'failed_at': row[7],
-            'exception': row[8],
-            'trade_response': row[9]
+            'parameters': row[3],
+            'trade_response': row[4],
+            'is_valid_trade': row[5],
+            'exception': row[6],
+            'created_at': row[7],
+            'processed_at': row[8],
+            'failed_at': row[9]
         }
         for row in rows
     ]
