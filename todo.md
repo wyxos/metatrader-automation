@@ -1,0 +1,2 @@
+- Add support to provide success rate per channel
+- Add support to allow choosing the account to send trade request per channel
