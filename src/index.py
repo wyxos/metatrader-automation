@@ -26,34 +26,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 client = None
 
-# SQLite database setup
-db_file = 'telegram_mt5_logs.db'
-conn = sqlite3.connect(db_file)
-cursor = conn.cursor()
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        channel TEXT,
-        message TEXT,
-        parameters TEXT,
-        trade_response TEXT,
-        is_valid_trade INTEGER,
-        exception TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        processed_at TEXT,
-        failed_at TEXT
-    )
-''')
-conn.commit()
-
 # Function to fetch enabled channels from the database
 def get_enabled_channels():
-    """
-    Fetch channel IDs marked as enabled from the database.
-    Convert negative IDs to positive before returning them.
-    """
+    conn = sqlite3.connect('telegram_mt5_logs.db')
+    cursor = conn.cursor()
     cursor.execute('SELECT telegram_id FROM channels WHERE enabled = 1')
-    return [abs(row[0]) for row in cursor.fetchall()]  # Convert negative IDs to positive
+    rows = cursor.fetchall()
+    conn.close()
+    return [abs(row[0]) for row in rows]
 
 
 # Function to generate a new session string and update .env
@@ -116,5 +96,3 @@ if __name__ == "__main__":
     loop.run_until_complete(initialize_telegram_client())
     loop.run_until_complete(start_telegram_client())
 
-# Close SQLite connection
-conn.close()

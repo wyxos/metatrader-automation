@@ -4,6 +4,11 @@ import sqlite3
 import asyncio
 import subprocess
 import os
+import webbrowser
+import threading
+
+def open_browser():
+    webbrowser.open_new('http://127.0.0.1:8000')
 
 from init_db import initialize_database
 initialize_database()
@@ -81,6 +86,13 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    # Clear terminal on Windows
     os.system('cls' if os.name == 'nt' else 'clear')
+
+    # Launch browser after short delay
+    threading.Timer(1.5, open_browser).start()
+
     app.run(debug=True, use_reloader=False, port=8000)
+
+
+
+

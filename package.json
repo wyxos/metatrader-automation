@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "python ./src/app.py",
+    "build": "cd ./ui && npm run build",
     "test": "vitest"
   },
   "keywords": [],
