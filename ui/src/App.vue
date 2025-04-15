@@ -13,9 +13,12 @@ onMounted(() => {
     )
 
   axios.get('/channels')
-    .then(response =>
+    .then(response => {
       channels.value = response.data
-    )
+
+      // if all channels are enabled, set toggleAll to true
+      toggleAll.value = !!channels.value.every(channel => channel.enabled === 1);
+    })
 
   setInterval(() => {
     axios.get('/logs')
@@ -27,8 +30,35 @@ onMounted(() => {
 
 const tab = ref('logs')
 
+const toggleAll = ref(false)
+
 const excerpt = (text, length = 40) => {
   return text.length > length ? text.substring(0, length) + '...' : text
+}
+
+async function onChannelToggle(channel){
+  await axios.patch('/channel', {id: channel.id, enabled: channel.enabled})
+
+  // if all channels are enabled, set toggleAll to true
+  toggleAll.value = !!channels.value.every(channel => channel.enabled === 1);
+}
+
+async function onToggleAll(value) {
+  const targetValue = value.target.checked ? 1 : 0
+  console.log('targetValue', value)
+
+  const ids = channels.value
+      .filter(c => c.enabled !== targetValue)
+      .map(c => c.id)
+
+  if (ids.length === 0) return
+
+  await axios.patch('/channels', { ids, enabled: targetValue })
+
+  // Update local state
+  channels.value.forEach(c => {
+    if (ids.includes(c.id)) c.enabled = targetValue
+  })
 }
 
 const scrollTop = () => {
@@ -55,6 +85,10 @@ const scrollTop = () => {
         </ul>
 
         <div v-if="tab === 'channels'" class="border-4 border-blue-500">
+          <div class="flex items-center gap-4 p-4">
+            Toggle <o-switch v-model="toggleAll" @change="onToggleAll"></o-switch>
+          </div>
+
           <table class="table w-full">
             <thead>
             <tr>
@@ -68,7 +102,7 @@ const scrollTop = () => {
               <td class="border px-4 py-2">{{ channel.name }}</td>
               <td class="border px-4 py-2">{{ channel.telegram_id }}</td>
               <td class="border px-4 py-2">
-                <o-switch v-model="channel.enabled" :true-value="1" :false-value="0" @change="() => axios.patch('/channel', {id: channel.id, enabled: channel.enabled})"></o-switch>
+                <o-switch v-model="channel.enabled" :true-value="1" :false-value="0" @change="onChannelToggle(channel)"></o-switch>
               </td>
             </tr>
             </tbody>
@@ -76,6 +110,8 @@ const scrollTop = () => {
         </div>
 
         <div v-if="tab === 'logs'" class="border-4 border-blue-500">
+
+
           <table class="table w-full">
             <thead>
             <tr>

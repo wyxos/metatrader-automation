@@ -6,6 +6,12 @@
     transition: all 0.3s;
 }
 
+/* override --oruga-primary */
+:root {
+    --oruga-primary: #1e3a8a;
+    --oruga-switch-checked-background: #1e3a8a;
+}
+
 /* Stripe table */
 @layer base {
     table {
