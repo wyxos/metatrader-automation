@@ -5,6 +5,9 @@ import asyncio
 import subprocess
 import os
 
+from init_db import initialize_database
+initialize_database()
+
 app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
 DB_FILE = 'telegram_mt5_logs.db'
 
