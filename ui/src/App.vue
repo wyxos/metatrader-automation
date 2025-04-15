@@ -41,9 +41,9 @@ const scrollTop = () => {
 
 <template>
   <div class="min-h-screen bg-slate-800 text-white antialiased">
-    <div class="container mx-auto">
-      <h1 class="text-center underline text-xl font-semibold py-10">Metatrader</h1>
-
+    <div class="container mx-auto flex flex-col">
+      <h1 class="text-center underline text-xl font-semibold mb-4 mt-10 block">A.U.T.O.</h1>
+      <p class="text-center mb-10">Automated Uptake of Telegram Orders</p>
       <div>
         <ul class="grid grid-cols-2 w-full text-center">
           <li>
