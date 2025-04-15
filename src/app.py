@@ -6,6 +6,8 @@ import subprocess
 import os
 import webbrowser
 import threading
+from dotenv import load_dotenv
+load_dotenv()
 
 def open_browser():
     webbrowser.open_new('http://127.0.0.1:8000')
@@ -13,7 +15,13 @@ def open_browser():
 from init_db import initialize_database
 initialize_database()
 
-app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
+is_dev = os.getenv('FRONTEND_ENV', 'prod') == 'dev'
+
+if is_dev:
+    app = Flask(__name__)  # No static/template folders
+else:
+    app = Flask(__name__, template_folder='../ui/dist', static_folder='../ui/dist/assets')
+
 DB_FILE = 'telegram_mt5_logs.db'
 
 # Properly run the async coroutine
@@ -80,10 +88,46 @@ def update_channel():
     conn.close()
     return jsonify({'message': 'Channel updated successfully'})
 
+@app.route('/channels', methods=['PATCH'])
+def bulk_update_channels():
+    data = request.json
+    ids = data['ids']
+    enabled = data['enabled']
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute(
+        f"UPDATE channels SET enabled = ? WHERE id IN ({','.join(['?']*len(ids))})",
+        [enabled, *ids]
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Channels updated successfully'})
+
 # Route to render HTML page
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if is_dev:
+        return '''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Telegram MT5 App</title>
+            <link
+              rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+            />
+        </head>
+        <body>
+            <div id="app"></div>
+            <script type="module" src="http://localhost:5174/src/main.js"></script>
+        </body>
+        </html>
+        '''
+    else:
+        return render_template('index.html')
 
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
