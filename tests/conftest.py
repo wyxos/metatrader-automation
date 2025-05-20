@@ -127,17 +127,33 @@ def mock_db():
 
     conn.commit()
 
+    # Create a fresh connection for each test to avoid "Cannot operate on a closed database" errors
+    def get_fresh_connection(*args, **kwargs):
+        # Ignore any arguments passed to this function
+        new_conn = sqlite3.connect(':memory:')
+        # Copy the schema and data from the original connection
+        for line in conn.iterdump():
+            if line != 'BEGIN;' and line != 'COMMIT;':
+                new_conn.execute(line)
+        new_conn.commit()
+        return new_conn
+
     # Create a patch for sqlite3.connect
     with patch('sqlite3.connect') as mock_connect:
+        # Return a fresh connection each time sqlite3.connect is called
+        mock_connect.side_effect = get_fresh_connection
+        # For the first call, return the original connection
         mock_connect.return_value = conn
+
         yield {
             "connect": mock_connect,
             "conn": conn,
-            "cursor": cursor
+            "cursor": cursor,
+            "get_fresh_connection": get_fresh_connection
         }
 
-    # Close the connection after the test
-    conn.close()
+        # We're not closing the connection here to avoid "Cannot operate on a closed database" errors
+        # In a real application, we would need to ensure the connection is closed properly
 
 # Mock for environment variables
 @pytest.fixture

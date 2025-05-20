@@ -7,18 +7,27 @@ from validateOrder import validateOrder
 from sendOrder import sendOrder
 
 
-def process_message(message, channel):
-    # Database file
-    db_file = 'telegram_mt5_logs.db'
+def process_message(message, channel, db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        # Database file
+        db_file = 'telegram_mt5_logs.db'
 
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_file)
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_file)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
     cursor = conn.cursor()
 
     # Ensure message is not empty
     if not message:
         logging.info('No message found.')
-        conn.close()
+        if should_close_conn:
+            conn.close()
         return
 
     # Clean the message
@@ -77,8 +86,9 @@ def process_message(message, channel):
         logging.error(f"Error inserting log into database: {e}")
         conn.rollback()  # Rollback if something goes wrong
 
-    # Close the database connection
-    conn.close()
+    # Close the database connection only if we created it
+    if should_close_conn:
+        conn.close()
 
 
 if __name__ == "__main__":
