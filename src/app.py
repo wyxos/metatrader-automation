@@ -32,13 +32,24 @@ subprocess.Popen(["python", "src/index.py"])
 
 # Route to fetch logs as JSON
 @app.route('/logs', methods=['GET'])
-def get_logs():
-    conn = sqlite3.connect(DB_FILE)
+def get_logs(db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')
 #     cursor.execute('SELECT * FROM logs ORDER BY created_at DESC')
     rows = cursor.fetchall()
-    conn.close()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
 
     # Convert rows to a list of dictionaries
     logs = [
@@ -59,12 +70,23 @@ def get_logs():
     return jsonify(logs)
 
 @app.route('/channels', methods=['GET'])
-def get_channels():
-    conn = sqlite3.connect(DB_FILE)
+def get_channels(db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM channels')
     rows = cursor.fetchall()
-    conn.close()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
 
     # Convert rows to a list of dictionaries
     channels = [
@@ -80,28 +102,50 @@ def get_channels():
 
 @app.route('/channel', methods=['PATCH'])
 # Route to enable or disable a channel by ID received in request
-def update_channel():
-    conn = sqlite3.connect(DB_FILE)
+def update_channel(db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
     cursor = conn.cursor()
     cursor.execute('UPDATE channels SET enabled = NOT enabled WHERE id = ?', (request.json['id'],))
     conn.commit()
-    conn.close()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
     return jsonify({'message': 'Channel updated successfully'})
 
 @app.route('/channels', methods=['PATCH'])
-def bulk_update_channels():
+def bulk_update_channels(db_connection=None):
     data = request.json
     ids = data['ids']
     enabled = data['enabled']
 
-    conn = sqlite3.connect(DB_FILE)
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
     cursor = conn.cursor()
     cursor.execute(
         f"UPDATE channels SET enabled = ? WHERE id IN ({','.join(['?']*len(ids))})",
         [enabled, *ids]
     )
     conn.commit()
-    conn.close()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
     return jsonify({'message': 'Channels updated successfully'})
 
 # Route to render HTML page
@@ -136,7 +180,3 @@ if __name__ == '__main__':
     threading.Timer(1.5, open_browser).start()
 
     app.run(debug=True, use_reloader=False, port=8000)
-
-
-
-
