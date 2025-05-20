@@ -52,7 +52,7 @@ class TestApp:
         # Check that the response contains expected HTML elements for dev mode
         # Case-insensitive check for doctype
         assert b'<!doctype html>' in response.data.lower() or b'<!DOCTYPE html>' in response.data
-        assert b'<script type="module" src="http://localhost:5174/src/main.js"></script>' in response.data
+        assert b'<script type="module" src="http://localhost:5173/src/main.js"></script>' in response.data
 
     @pytest.mark.skip(reason="Database connection issues with mocking")
     def test_get_logs_route(self, client, mock_db, monkeypatch):

@@ -209,7 +209,7 @@ def bulk_update_channels(db_connection=None):
 def index():
     if is_dev:
         return '''
-        <!DOCTYPE html>
+        <!doctype html>
         <html lang="en">
         <head>
             <meta charset="UTF-8" />

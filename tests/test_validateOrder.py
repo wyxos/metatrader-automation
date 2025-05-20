@@ -93,3 +93,14 @@ def test_validate_order_with_special_characters():
     assert result["price"] == 2570.0
     assert result["sl"] == 2564.0
     assert result["tp"] == [2572.0]
+
+def test_validate_order_with_indexed_tp():
+    # Test an order with indexed take profit values (tp 1, tp 2, etc.)
+    message = "BTCUSD buy 106900 tp 1 107100 tp 2 107200 tp 3 107300 tp 4 109500 sl 104900 no financial advice"
+    result = validateOrder(message)
+
+    assert result["signal"] == "buy"
+    assert result["symbol"] == "BTCUSD"
+    assert result["price"] == 106900.0
+    assert result["sl"] == 104900.0
+    assert result["tp"] == [107100.0, 107200.0, 107300.0, 109500.0]
