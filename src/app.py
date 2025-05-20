@@ -42,9 +42,55 @@ def get_logs(db_connection=None):
         conn = db_connection
         should_close_conn = False
 
+    # Get query parameters for filtering and pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    start_date = request.args.get('start_date', None)
+    end_date = request.args.get('end_date', None)
+    channel = request.args.get('channel', None)
+    status = request.args.get('status', None)
+
+    # Build the query with filters
+    query = 'SELECT * FROM logs WHERE 1=1'
+    params = []
+
+    # Apply date range filter
+    if start_date:
+        query += ' AND created_at >= ?'
+        params.append(start_date)
+
+    if end_date:
+        query += ' AND created_at <= ?'
+        params.append(end_date)
+
+    # Apply channel filter
+    if channel:
+        query += ' AND channel = ?'
+        params.append(channel)
+
+    # Apply status filter
+    if status:
+        if status == 'success':
+            query += ' AND trade_response != "null"'
+        elif status == 'error':
+            query += ' AND exception IS NOT NULL'
+
+    # Add ordering
+    query += ' ORDER BY created_at DESC'
+
+    # Get total count for pagination
+    count_query = query.replace('SELECT *', 'SELECT COUNT(*)')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM logs WHERE created_at >= date("now") ORDER BY created_at DESC')
-#     cursor.execute('SELECT * FROM logs ORDER BY created_at DESC')
+    cursor.execute(count_query, params)
+    total_count = cursor.fetchone()[0]
+
+    # Add pagination
+    query += ' LIMIT ? OFFSET ?'
+    offset = (page - 1) * per_page
+    params.extend([per_page, offset])
+
+    # Execute the query
+    cursor.execute(query, params)
     rows = cursor.fetchall()
 
     # Close the connection only if we created it
@@ -67,7 +113,17 @@ def get_logs(db_connection=None):
         }
         for row in rows
     ]
-    return jsonify(logs)
+
+    # Return logs with pagination metadata
+    return jsonify({
+        'logs': logs,
+        'pagination': {
+            'total': total_count,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page
+        }
+    })
 
 @app.route('/channels', methods=['GET'])
 def get_channels(db_connection=None):
@@ -166,7 +222,7 @@ def index():
         </head>
         <body>
             <div id="app"></div>
-            <script type="module" src="http://localhost:5174/src/main.js"></script>
+            <script type="module" src="http://localhost:5173/src/main.js"></script>
         </body>
         </html>
         '''
