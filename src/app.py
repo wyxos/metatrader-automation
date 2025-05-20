@@ -204,6 +204,221 @@ def bulk_update_channels(db_connection=None):
         conn.close()
     return jsonify({'message': 'Channels updated successfully'})
 
+# Routes for MetaTrader accounts
+@app.route('/accounts', methods=['GET'])
+def get_accounts(db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM mt_accounts')
+    rows = cursor.fetchall()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    # Convert rows to a list of dictionaries
+    accounts = [
+        {
+            'id': row[0],
+            'account_name': row[1],
+            'server_name': row[2],
+            'login_id': row[3],
+            'password': row[4],
+            'created_at': row[5]
+        }
+        for row in rows
+    ]
+    return jsonify(accounts)
+
+@app.route('/accounts', methods=['POST'])
+def create_account(db_connection=None):
+    data = request.json
+
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+    cursor.execute(
+        'INSERT INTO mt_accounts (account_name, server_name, login_id, password) VALUES (?, ?, ?, ?)',
+        (data['account_name'], data['server_name'], data['login_id'], data['password'])
+    )
+    conn.commit()
+
+    # Get the ID of the newly created account
+    account_id = cursor.lastrowid
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    return jsonify({'id': account_id, 'message': 'Account created successfully'})
+
+@app.route('/accounts/<int:account_id>', methods=['PUT'])
+def update_account(account_id, db_connection=None):
+    data = request.json
+
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE mt_accounts SET account_name = ?, server_name = ?, login_id = ?, password = ? WHERE id = ?',
+        (data['account_name'], data['server_name'], data['login_id'], data['password'], account_id)
+    )
+    conn.commit()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    return jsonify({'message': 'Account updated successfully'})
+
+@app.route('/accounts/<int:account_id>', methods=['DELETE'])
+def delete_account(account_id, db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM mt_accounts WHERE id = ?', (account_id,))
+    conn.commit()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    return jsonify({'message': 'Account deleted successfully'})
+
+# Routes for channel-to-account mappings
+@app.route('/channel-mappings', methods=['GET'])
+def get_channel_mappings(db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT cm.id, c.id as channel_id, c.name as channel_name, a.id as account_id, a.account_name
+        FROM channel_account_mappings cm
+        JOIN channels c ON cm.channel_id = c.id
+        JOIN mt_accounts a ON cm.account_id = a.id
+    ''')
+    rows = cursor.fetchall()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    # Convert rows to a list of dictionaries
+    mappings = [
+        {
+            'id': row[0],
+            'channel_id': row[1],
+            'channel_name': row[2],
+            'account_id': row[3],
+            'account_name': row[4]
+        }
+        for row in rows
+    ]
+    return jsonify(mappings)
+
+@app.route('/channel-mappings', methods=['POST'])
+def create_channel_mapping(db_connection=None):
+    data = request.json
+
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+
+    # Check if a mapping already exists for this channel
+    cursor.execute('SELECT id FROM channel_account_mappings WHERE channel_id = ?', (data['channel_id'],))
+    existing_mapping = cursor.fetchone()
+
+    if existing_mapping:
+        # Update existing mapping
+        cursor.execute(
+            'UPDATE channel_account_mappings SET account_id = ? WHERE channel_id = ?',
+            (data['account_id'], data['channel_id'])
+        )
+    else:
+        # Create new mapping
+        cursor.execute(
+            'INSERT INTO channel_account_mappings (channel_id, account_id) VALUES (?, ?)',
+            (data['channel_id'], data['account_id'])
+        )
+
+    conn.commit()
+
+    # Get the ID of the newly created or updated mapping
+    if existing_mapping:
+        mapping_id = existing_mapping[0]
+    else:
+        mapping_id = cursor.lastrowid
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    return jsonify({'id': mapping_id, 'message': 'Channel mapping created/updated successfully'})
+
+@app.route('/channel-mappings/<int:mapping_id>', methods=['DELETE'])
+def delete_channel_mapping(mapping_id, db_connection=None):
+    # If no connection is provided, create a new one
+    if db_connection is None:
+        conn = sqlite3.connect(DB_FILE)
+        should_close_conn = True
+    else:
+        # Use the provided connection
+        conn = db_connection
+        should_close_conn = False
+
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM channel_account_mappings WHERE id = ?', (mapping_id,))
+    conn.commit()
+
+    # Close the connection only if we created it
+    if should_close_conn:
+        conn.close()
+
+    return jsonify({'message': 'Channel mapping deleted successfully'})
+
 # Route to render HTML page
 @app.route('/')
 def index():

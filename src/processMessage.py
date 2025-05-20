@@ -23,6 +23,42 @@ def process_message(message, channel, db_connection=None):
 
     cursor = conn.cursor()
 
+    # Get account information for this channel
+    account_info = None
+    try:
+        # First get the channel ID
+        cursor.execute('SELECT id FROM channels WHERE name = ?', (channel,))
+        channel_row = cursor.fetchone()
+
+        if channel_row:
+            channel_id = channel_row[0]
+
+            # Then get the account ID mapped to this channel
+            cursor.execute('''
+                SELECT a.* FROM mt_accounts a
+                JOIN channel_account_mappings m ON a.id = m.account_id
+                WHERE m.channel_id = ?
+            ''', (channel_id,))
+
+            account_row = cursor.fetchone()
+
+            if account_row:
+                account_info = {
+                    'id': account_row[0],
+                    'account_name': account_row[1],
+                    'server_name': account_row[2],
+                    'login_id': account_row[3],
+                    'password': account_row[4]
+                }
+                logging.info(f"Using account {account_info['account_name']} for channel {channel}")
+            else:
+                logging.warning(f"No account mapped for channel {channel}")
+        else:
+            logging.warning(f"Channel {channel} not found in database")
+    except Exception as e:
+        logging.error(f"Error fetching account info: {e}")
+        # Continue without account info if there's an error
+
     # Ensure message is not empty
     if not message:
         logging.info('No message found.')
@@ -61,7 +97,7 @@ def process_message(message, channel, db_connection=None):
             # Iterate through each take-profit (tp) value and send an order
             for tp in orderJson['tp']:
                 orderJson['tp'] = tp
-                trade_response = sendOrder(orderJson, tp)
+                trade_response = sendOrder(orderJson, tp, account_info)
                 if trade_response.get('success'):
                     # success is present and truthy
                     processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
