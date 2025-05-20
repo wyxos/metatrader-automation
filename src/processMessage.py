@@ -62,10 +62,12 @@ def process_message(message, channel, db_connection=None):
             for tp in orderJson['tp']:
                 orderJson['tp'] = tp
                 trade_response = sendOrder(orderJson, tp)
-                if not trade_response['success']:
-                    failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
-                else:
+                if trade_response.get('success'):
+                    # success is present and truthy
                     processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    # either not present, or falsy
+                    failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
 
     except Exception as e:
         logging.error(f"Error validating order: {e}")
