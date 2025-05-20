@@ -59,13 +59,28 @@ watch(filters, () => {
 
 onMounted(() => {
   fetchLogs()
+  fetchAccounts()
+  fetchChannelMappings()
 
   axios.get('/channels')
     .then(response => {
-      channels.value = response.data
+      channels.value = response.data.map(channel => ({
+        ...channel,
+        account_id: null // Initialize account_id property
+      }))
 
       // if all channels are enabled, set toggleAll to true
       toggleAll.value = !!channels.value.every(channel => channel.enabled === 1);
+
+      // After channel mappings are loaded, set account_id for each channel
+      fetchChannelMappings().then(() => {
+        channels.value.forEach(channel => {
+          const mapping = channelMappings.value.find(m => m.channel_id === channel.id)
+          if (mapping) {
+            channel.account_id = mapping.account_id
+          }
+        })
+      })
     })
 
   // Auto-refresh logs every 5 seconds
@@ -76,6 +91,111 @@ onMounted(() => {
 
 const tab = ref('logs')
 const toggleAll = ref(false)
+
+// Account management
+const accounts = ref([])
+const showAccountModal = ref(false)
+const editingAccount = ref(null)
+const newAccount = ref({
+  account_name: '',
+  server_name: '',
+  login_id: '',
+  password: ''
+})
+
+// Channel-account mappings
+const channelMappings = ref([])
+
+// Fetch accounts
+const fetchAccounts = async () => {
+  try {
+    const response = await axios.get('/accounts')
+    accounts.value = response.data
+  } catch (error) {
+    console.error('Error fetching accounts:', error)
+  }
+}
+
+// Fetch channel-account mappings
+const fetchChannelMappings = async () => {
+  try {
+    const response = await axios.get('/channel-mappings')
+    channelMappings.value = response.data
+  } catch (error) {
+    console.error('Error fetching channel mappings:', error)
+  }
+}
+
+// Create or update account
+const saveAccount = async () => {
+  try {
+    if (editingAccount.value) {
+      // Update existing account
+      await axios.put(`/accounts/${editingAccount.value.id}`, newAccount.value)
+    } else {
+      // Create new account
+      await axios.post('/accounts', newAccount.value)
+    }
+
+    // Refresh accounts list
+    await fetchAccounts()
+
+    // Reset form and close modal
+    resetAccountForm()
+    showAccountModal.value = false
+  } catch (error) {
+    console.error('Error saving account:', error)
+  }
+}
+
+// Delete account
+const deleteAccount = async (accountId) => {
+  if (!confirm('Are you sure you want to delete this account?')) return
+
+  try {
+    await axios.delete(`/accounts/${accountId}`)
+    await fetchAccounts()
+  } catch (error) {
+    console.error('Error deleting account:', error)
+  }
+}
+
+// Edit account
+const editAccount = (account) => {
+  editingAccount.value = account
+  newAccount.value = { ...account }
+  showAccountModal.value = true
+}
+
+// Reset account form
+const resetAccountForm = () => {
+  editingAccount.value = null
+  newAccount.value = {
+    account_name: '',
+    server_name: '',
+    login_id: '',
+    password: ''
+  }
+}
+
+// Update channel-account mapping
+const updateChannelMapping = async (channelId, accountId) => {
+  try {
+    await axios.post('/channel-mappings', {
+      channel_id: channelId,
+      account_id: accountId
+    })
+    await fetchChannelMappings()
+  } catch (error) {
+    console.error('Error updating channel mapping:', error)
+  }
+}
+
+// Get account for channel
+const getAccountForChannel = (channelId) => {
+  const mapping = channelMappings.value.find(m => m.channel_id === channelId)
+  return mapping ? mapping.account_id : null
+}
 
 const excerpt = (text, length = 40) => {
   if (!text) return ''
@@ -140,12 +260,15 @@ const formatDate = (dateString) => {
       <h1 class="text-center underline text-xl font-semibold mb-4 mt-10 block">A.U.T.O.</h1>
       <p class="text-center mb-10">Automated Uptake of Telegram Orders</p>
       <div>
-        <ul class="grid grid-cols-2 w-full text-center">
+        <ul class="grid grid-cols-3 w-full text-center">
           <li>
             <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'logs'" :class="{'!bg-blue-500' : tab === 'logs'}">Logs</button>
           </li>
           <li>
             <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'channels'" :class="{'!bg-blue-500' : tab === 'channels'}">Channels</button>
+          </li>
+          <li>
+            <button type="button" class="bg-slate-500 w-full py-2" @click="tab = 'accounts'" :class="{'!bg-blue-500' : tab === 'accounts'}">Accounts</button>
           </li>
         </ul>
 
@@ -160,6 +283,7 @@ const formatDate = (dateString) => {
               <th class="px-4 py-2">Name</th>
               <th class="px-4 py-2">ID</th>
               <th class="px-4 py-2">Status</th>
+              <th class="px-4 py-2">MetaTrader Account</th>
             </tr>
             </thead>
             <tbody>
@@ -169,7 +293,72 @@ const formatDate = (dateString) => {
               <td class="border px-4 py-2">
                 <o-switch v-model="channel.enabled" :true-value="1" :false-value="0" @change="onChannelToggle(channel)"></o-switch>
               </td>
+              <td class="border px-4 py-2">
+                <select
+                  v-model="channel.account_id"
+                  @change="updateChannelMapping(channel.id, channel.account_id)"
+                  class="w-full p-2 rounded bg-slate-600 text-white"
+                  :disabled="accounts.length === 0"
+                >
+                  <option value="">Select Account</option>
+                  <option v-for="account in accounts" :key="account.id" :value="account.id">
+                    {{ account.account_name }}
+                  </option>
+                </select>
+              </td>
             </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Accounts Tab -->
+        <div v-if="tab === 'accounts'" class="border-4 border-blue-500">
+          <div class="p-4 flex justify-between items-center">
+            <h2 class="text-xl font-semibold">MetaTrader Accounts</h2>
+            <button
+              @click="resetAccountForm(); showAccountModal = true"
+              class="px-4 py-2 bg-green-500 hover:bg-green-700 rounded"
+            >
+              <i class="fas fa-plus mr-2"></i> Add Account
+            </button>
+          </div>
+
+          <table class="table w-full">
+            <thead>
+              <tr>
+                <th class="px-4 py-2">Account Name</th>
+                <th class="px-4 py-2">Server Name</th>
+                <th class="px-4 py-2">Login ID</th>
+                <th class="px-4 py-2">Password</th>
+                <th class="px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="account in accounts" :key="account.id">
+                <td class="border px-4 py-2">{{ account.account_name }}</td>
+                <td class="border px-4 py-2">{{ account.server_name }}</td>
+                <td class="border px-4 py-2">{{ account.login_id }}</td>
+                <td class="border px-4 py-2">•••••••••</td>
+                <td class="border px-4 py-2 flex gap-2 justify-center">
+                  <button
+                    @click="editAccount(account)"
+                    class="px-3 py-1 bg-blue-500 hover:bg-blue-700 rounded"
+                  >
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button
+                    @click="deleteAccount(account.id)"
+                    class="px-3 py-1 bg-red-500 hover:bg-red-700 rounded"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="accounts.length === 0">
+                <td colspan="5" class="border px-4 py-8 text-center">
+                  No accounts found. Click "Add Account" to create one.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -355,6 +544,67 @@ const formatDate = (dateString) => {
         <button @click="scrollTop" class="fixed bottom-0 right-0 m-4 bg-blue-500 hover:bg-blue-900 p-2 rounded">
           <i class="fas fa-arrow-up"></i>
         </button>
+
+        <!-- Account Modal -->
+        <div v-if="showAccountModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div class="bg-slate-700 rounded-lg shadow-lg max-w-md w-full">
+            <div class="p-4 border-b border-slate-600 flex justify-between items-center">
+              <h3 class="text-xl font-semibold">{{ editingAccount ? 'Edit Account' : 'Add Account' }}</h3>
+              <button @click="showAccountModal = false" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="p-4">
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Account Name</label>
+                <input
+                  v-model="newAccount.account_name"
+                  class="w-full p-2 rounded bg-slate-600 text-white"
+                  placeholder="e.g., Blorvax"
+                >
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Server Name</label>
+                <input
+                  v-model="newAccount.server_name"
+                  class="w-full p-2 rounded bg-slate-600 text-white"
+                  placeholder="e.g., Metatrader"
+                >
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Login ID</label>
+                <input
+                  v-model="newAccount.login_id"
+                  class="w-full p-2 rounded bg-slate-600 text-white"
+                  placeholder="Enter login ID"
+                >
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Password</label>
+                <input
+                  type="password"
+                  v-model="newAccount.password"
+                  class="w-full p-2 rounded bg-slate-600 text-white"
+                  placeholder="Enter password"
+                >
+              </div>
+            </div>
+            <div class="p-4 border-t border-slate-600 flex justify-end gap-2">
+              <button
+                @click="showAccountModal = false"
+                class="px-4 py-2 bg-gray-500 hover:bg-gray-700 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                @click="saveAccount()"
+                class="px-4 py-2 bg-green-500 hover:bg-green-700 rounded"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

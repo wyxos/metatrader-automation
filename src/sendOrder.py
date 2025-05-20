@@ -3,7 +3,7 @@ import MetaTrader5 as mt5
 import logging
 from validateOrder import validateOrder
 
-def sendOrder(order_json, tp):
+def sendOrder(order_json, tp, account_info=None):
     # Parse the JSON string to a Python dictionary
     order_data = order_json
 
@@ -18,6 +18,28 @@ def sendOrder(order_json, tp):
     if not mt5.initialize():
         print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
         return {"success": False, "error": "Initialization failed"}
+
+    # If account info is provided, try to login to that account
+    if account_info:
+        # Shutdown current connection
+        mt5.shutdown()
+
+        # Initialize again with the specified account
+        if not mt5.initialize():
+            print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
+            return {"success": False, "error": "Initialization failed"}
+
+        # Login to the specified account
+        login_result = mt5.login(
+            login=int(account_info['login_id']),
+            password=account_info['password'],
+            server=account_info['server_name']
+        )
+
+        if not login_result:
+            error_code = mt5.last_error()
+            print(f"Failed to login to account {account_info['account_name']}, error code:", error_code)
+            return {"success": False, "error": f"Login failed with error code {error_code}"}
 
     # Ensure AutoTrading is enabled
     account_info = mt5.account_info()
