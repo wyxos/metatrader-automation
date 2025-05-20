@@ -159,7 +159,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -185,7 +185,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -212,7 +212,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -246,7 +246,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
