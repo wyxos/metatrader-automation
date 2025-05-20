@@ -3,7 +3,7 @@ import MetaTrader5 as mt5
 import logging
 from validateOrder import validateOrder
 
-def sendOrder(order_json, tp, account_info=None):
+def sendOrder(order_json, tp, account_info=None, shutdown_after=False):
     # Parse the JSON string to a Python dictionary
     order_data = order_json
 
@@ -113,7 +113,9 @@ def sendOrder(order_json, tp, account_info=None):
         }
     else:
         print(f"Order successfully placed. Ticket: {result.order}")
-        mt5.shutdown()
+        # Only shutdown if explicitly requested
+        if shutdown_after:
+            mt5.shutdown()
         return {
             "success": True,
             "result": result._asdict()  # Return result details as a dictionary

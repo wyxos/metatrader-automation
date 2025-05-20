@@ -95,15 +95,19 @@ def process_message(message, channel, db_connection=None):
         else:
             is_valid_trade = 1
             # Iterate through each take-profit (tp) value and send an order
-            for tp in orderJson['tp']:
+            for i, tp in enumerate(orderJson['tp']):
                 orderJson['tp'] = tp
-                trade_response = sendOrder(orderJson, tp, account_info)
+                # Only shutdown after the last order
+                is_last_order = i == len(orderJson['tp']) - 1
+                trade_response = sendOrder(orderJson, tp, account_info, shutdown_after=is_last_order)
                 if trade_response.get('success'):
                     # success is present and truthy
                     processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     # either not present, or falsy
                     failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+                    # If an order fails, don't try to send more orders
+                    break
 
     except Exception as e:
         logging.error(f"Error validating order: {e}")

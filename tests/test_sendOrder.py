@@ -17,8 +17,8 @@ class TestSendOrder:
             "tp": [2010.0, 2020.0]
         }
 
-        # Call the function with the first TP value
-        result = sendOrder(order_data, order_data["tp"][0])
+        # Call the function with the first TP value and explicit shutdown
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is True
@@ -51,8 +51,8 @@ class TestSendOrder:
             "tp": [1990.0]
         }
 
-        # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        # Call the function with explicit shutdown
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is True
@@ -82,7 +82,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -107,7 +107,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -135,7 +135,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0])
+        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
