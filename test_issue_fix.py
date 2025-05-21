@@ -1,21 +1,27 @@
 import json
 import logging
-from src.validateOrder import validateOrder
-from src.sendOrder import sendOrder
+import sys
+import os
+
+# Add the src directory to the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+from validateOrder import validateOrder
+from sendOrder import sendOrder
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Test message with multiple take-profit values
-test_message = "XAUUSD buy 3301 sl 3294 tp1 3304 tp2 3307 tp3 3310 tp4 3313"
+# Test message from the issue description
+test_message = "XAUUSD buy 3308 - 3305 sl 3302 tp 3313 (50pips) tp 3318 (100pips) manage your risk and reward"
 
 # Sample account info for testing
 test_account_info = {
     'id': 1,
-    'account_name': 'Test Account',
-    'server_name': 'Test Server',
-    'login_id': '12345',
-    'password': 'password123'
+    'account_name': 'Capstock-Server',
+    'server_name': 'Capstock-Server',
+    'login_id': '301100',
+    'password': '$Jason2024'
 }
 
 # Validate the message to extract order details

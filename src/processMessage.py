@@ -144,6 +144,9 @@ def process_message(message, channel, db_connection=None):
             if not account_info and all_accounts and is_valid_trade:
                 logging.info(f"Sending valid trade to all {len(all_accounts)} accounts")
 
+                # Create an array to collect all responses
+                all_responses = []
+
                 # For each account
                 for account in all_accounts:
                     logging.info(f"Sending to account: {account['account_name']}")
@@ -157,7 +160,14 @@ def process_message(message, channel, db_connection=None):
                         is_last_order = (i == len(original_tp_values) - 1) and (account == all_accounts[-1])
 
                         # Send the order
-                        account_trade_response = sendOrder(orderJson, tp, account, shutdown_after=is_last_order)
+                        account_trade_response = sendOrder(orderJson, account_info=account, shutdown_after=is_last_order)
+
+                        # Add this response to our collection
+                        all_responses.append({
+                            "account": account['account_name'],
+                            "id": account['id'],
+                            "response": account_trade_response
+                        })
 
                         # Log the response for this account
                         try:
@@ -174,8 +184,11 @@ def process_message(message, channel, db_connection=None):
                         except Exception as e:
                             logging.error(f"Error inserting log for account {account['account_name']}: {e}")
 
-                # Set trade_response to the last response (just for the main log entry)
-                trade_response = {"success": True, "message": f"Sent to {len(all_accounts)} accounts"}
+                # Set trade_response with all collected responses
+                trade_response = {
+                    "success": True,
+                    "responses": all_responses
+                }
                 processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
             else:
                 # Regular case - send to the mapped account or default
@@ -188,7 +201,7 @@ def process_message(message, channel, db_connection=None):
                     is_last_order = i == len(original_tp_values) - 1
 
                     # Send the order
-                    trade_response = sendOrder(orderJson, tp, account_info, shutdown_after=is_last_order)
+                    trade_response = sendOrder(orderJson, account_info=account_info, shutdown_after=is_last_order)
                     if trade_response.get('success'):
                         # success is present and truthy
                         processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
