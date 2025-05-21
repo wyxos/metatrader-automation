@@ -32,7 +32,7 @@ def sendOrder(order_json, tp, account_info=None, shutdown_after=False):
             # Initialize again with the specified account
             if not mt5.initialize():
                 print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
-                return {"success": False, "error": "Initialization failed"}
+                return {"success": False, "error": "Account info supplied but initialization failed"}
 
         # Login to the specified account
         login_result = mt5.login(

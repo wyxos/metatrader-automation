@@ -17,8 +17,7 @@ def initialize_database():
             exception TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             processed_at TEXT,
-            failed_at TEXT,
-            account_name TEXT
+            failed_at TEXT
         )
     ''')
 
