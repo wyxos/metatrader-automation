@@ -52,40 +52,47 @@ def get_logs(db_connection=None):
     is_valid_trade = request.args.get('is_valid_trade', None)
 
     # Build the query with filters
-    query = 'SELECT * FROM logs WHERE 1=1'
+    query = '''
+        SELECT l.*, c.id as channel_id, m.account_id, a.account_name
+        FROM logs l
+        LEFT JOIN channels c ON l.channel = c.name
+        LEFT JOIN channel_account_mappings m ON c.id = m.channel_id
+        LEFT JOIN mt_accounts a ON m.account_id = a.id
+        WHERE 1=1
+    '''
     params = []
 
     # Apply date range filter
     if start_date:
-        query += ' AND created_at >= ?'
+        query += ' AND l.created_at >= ?'
         params.append(start_date)
 
     if end_date:
-        query += ' AND created_at <= ?'
+        query += ' AND l.created_at <= ?'
         params.append(end_date)
 
     # Apply channel filter
     if channel:
-        query += ' AND channel = ?'
+        query += ' AND l.channel = ?'
         params.append(channel)
 
     # Apply status filter
     if status:
         if status == 'success':
-            query += ' AND trade_response != "null"'
+            query += ' AND l.trade_response != "null"'
         elif status == 'error':
-            query += ' AND exception IS NOT NULL'
+            query += ' AND l.exception IS NOT NULL'
 
     # Apply is_valid_trade filter
     if is_valid_trade is not None:
-        query += ' AND is_valid_trade = ?'
+        query += ' AND l.is_valid_trade = ?'
         params.append(int(is_valid_trade))
 
     # Add ordering
-    query += ' ORDER BY created_at DESC'
+    query += ' ORDER BY l.created_at DESC'
 
     # Get total count for pagination
-    count_query = query.replace('SELECT *', 'SELECT COUNT(*)')
+    count_query = query.replace('SELECT l.*, c.id as channel_id, m.account_id, a.account_name', 'SELECT COUNT(*)')
     cursor = conn.cursor()
     cursor.execute(count_query, params)
     total_count = cursor.fetchone()[0]
@@ -104,8 +111,12 @@ def get_logs(db_connection=None):
         conn.close()
 
     # Convert rows to a list of dictionaries
-    logs = [
-        {
+    logs = []
+    for row in rows:
+        # The last three columns are from the joined tables (channel_id, account_id, account_name)
+        account_name = row[-1] if row[-1] is not None else "default"
+
+        logs.append({
             'id': row[0],
             'channel': row[1],
             'message': row[2],
@@ -116,10 +127,8 @@ def get_logs(db_connection=None):
             'created_at': row[7],
             'processed_at': row[8],
             'failed_at': row[9],
-            'account_name': row[10] if len(row) > 10 else None
-        }
-        for row in rows
-    ]
+            'account_name': account_name
+        })
 
     # Return logs with pagination metadata
     return jsonify({

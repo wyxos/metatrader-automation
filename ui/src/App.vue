@@ -512,7 +512,7 @@ const formatDate = (dateString) => {
               <td class="border px-4 py-2">{{ log.created_at }}</td>
               <td class="border px-4 py-2" :class="{'bg-red-500': Boolean(log.exception), 'bg-green-500': log.trade_response !== 'null'}"></td>
               <td class="border px-4 py-2">{{ log.channel }}</td>
-              <td class="border px-4 py-2">{{ log.account_name || 'Default' }}</td>
+              <td class="border px-4 py-2">{{ log.account_name }}</td>
               <td class="border px-4 py-2">{{ excerpt(log.message) }}</td>
               <td class="border px-4 py-2">{{ log.trade_response !== "null" ? log.parameters : '' }}</td>
               <td class="border px-4 py-2 text-center">
@@ -592,7 +592,7 @@ const formatDate = (dateString) => {
                 </div>
                 <div>
                   <p class="text-gray-400">Account:</p>
-                  <p>{{ selectedLog.account_name || 'Default' }}</p>
+                  <p>{{ selectedLog.account_name }}</p>
                 </div>
                 <div>
                   <p class="text-gray-400">Status:</p>
