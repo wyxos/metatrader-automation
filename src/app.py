@@ -49,6 +49,7 @@ def get_logs(db_connection=None):
     end_date = request.args.get('end_date', None)
     channel = request.args.get('channel', None)
     status = request.args.get('status', None)
+    is_valid_trade = request.args.get('is_valid_trade', None)
 
     # Build the query with filters
     query = 'SELECT * FROM logs WHERE 1=1'
@@ -74,6 +75,11 @@ def get_logs(db_connection=None):
             query += ' AND trade_response != "null"'
         elif status == 'error':
             query += ' AND exception IS NOT NULL'
+
+    # Apply is_valid_trade filter
+    if is_valid_trade is not None:
+        query += ' AND is_valid_trade = ?'
+        params.append(int(is_valid_trade))
 
     # Add ordering
     query += ' ORDER BY created_at DESC'
@@ -109,7 +115,8 @@ def get_logs(db_connection=None):
             'exception': row[6],
             'created_at': row[7],
             'processed_at': row[8],
-            'failed_at': row[9]
+            'failed_at': row[9],
+            'account_name': row[10] if len(row) > 10 else None
         }
         for row in rows
     ]
@@ -136,8 +143,41 @@ def get_channels(db_connection=None):
         conn = db_connection
         should_close_conn = False
 
+    # Get query parameters for filtering
+    name = request.args.get('name', None)
+    enabled = request.args.get('enabled', None)
+    account_id = request.args.get('account_id', None)
+    channel_id = request.args.get('id', None)
+
+    # Build the base query
+    query = '''
+        SELECT c.id, c.telegram_id, c.name, c.enabled, m.account_id
+        FROM channels c
+        LEFT JOIN channel_account_mappings m ON c.id = m.channel_id
+        WHERE 1=1
+    '''
+    params = []
+
+    # Apply filters
+    if name:
+        query += ' AND c.name LIKE ?'
+        params.append(f'%{name}%')
+
+    if enabled is not None:
+        query += ' AND c.enabled = ?'
+        params.append(int(enabled))
+
+    if account_id:
+        query += ' AND m.account_id = ?'
+        params.append(int(account_id))
+
+    if channel_id:
+        query += ' AND CAST(c.telegram_id AS TEXT) LIKE ?'
+        params.append(f'%{channel_id}%')
+
+    # Execute the query
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM channels')
+    cursor.execute(query, params)
     rows = cursor.fetchall()
 
     # Close the connection only if we created it
@@ -150,7 +190,8 @@ def get_channels(db_connection=None):
             'id': row[0],
             'telegram_id': row[1],
             'name': row[2],
-            'enabled': row[3]
+            'enabled': row[3],
+            'account_id': row[4]
         }
         for row in rows
     ]

@@ -17,12 +17,21 @@ const uniqueChannels = computed(() => {
   return Array.from(channelSet)
 })
 
+// Channel filters
+const channelFilters = ref({
+  name: '',
+  enabled: '',
+  account_id: '',
+  id: ''
+})
+
 // Filters
 const filters = ref({
   start_date: '',
   end_date: '',
   channel: '',
-  status: ''
+  status: '',
+  is_valid_trade: ''
 })
 
 // Selected log for detail view
@@ -57,31 +66,49 @@ watch(filters, () => {
   fetchLogs()
 }, { deep: true })
 
-onMounted(() => {
-  fetchLogs()
-  fetchAccounts()
-  fetchChannelMappings()
+// Fetch channels with filters
+const fetchChannels = async () => {
+  try {
+    const params = { ...channelFilters.value }
 
-  axios.get('/channels')
-    .then(response => {
-      channels.value = response.data.map(channel => ({
-        ...channel,
-        account_id: null // Initialize account_id property
-      }))
+    // Remove empty filters
+    Object.keys(params).forEach(key => {
+      if (!params[key]) delete params[key]
+    })
 
-      // if all channels are enabled, set toggleAll to true
-      toggleAll.value = !!channels.value.every(channel => channel.enabled === 1);
+    const response = await axios.get('/channels', { params })
+    channels.value = response.data
 
-      // After channel mappings are loaded, set account_id for each channel
-      fetchChannelMappings().then(() => {
-        channels.value.forEach(channel => {
+    // if all channels are enabled, set toggleAll to true
+    toggleAll.value = !!channels.value.every(channel => channel.enabled === 1);
+
+    // After channel mappings are loaded, ensure account_id is properly set for each channel
+    // This is needed for channels that don't have account_id in the response
+    fetchChannelMappings().then(() => {
+      channels.value.forEach(channel => {
+        if (!channel.account_id) {
           const mapping = channelMappings.value.find(m => m.channel_id === channel.id)
           if (mapping) {
             channel.account_id = mapping.account_id
           }
-        })
+        }
       })
     })
+  } catch (error) {
+    console.error('Error fetching channels:', error)
+  }
+}
+
+// Watch for channel filter changes
+watch(channelFilters, () => {
+  fetchChannels()
+}, { deep: true })
+
+onMounted(() => {
+  fetchLogs()
+  fetchAccounts()
+  fetchChannelMappings()
+  fetchChannels()
 
   // Auto-refresh logs every 5 seconds
   setInterval(() => {
@@ -277,6 +304,51 @@ const formatDate = (dateString) => {
             Toggle <o-switch v-model="toggleAll" @change="onToggleAll"></o-switch>
           </div>
 
+          <!-- Filter controls for channels -->
+          <div class="p-4 bg-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Name</label>
+              <input
+                type="text"
+                v-model="channelFilters.name"
+                placeholder="Search by name"
+                class="w-full p-2 rounded bg-slate-600 text-white"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Status</label>
+              <select
+                v-model="channelFilters.enabled"
+                class="w-full p-2 rounded bg-slate-600 text-white"
+              >
+                <option value="">All</option>
+                <option value="1">Enabled</option>
+                <option value="0">Disabled</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Account</label>
+              <select
+                v-model="channelFilters.account_id"
+                class="w-full p-2 rounded bg-slate-600 text-white"
+              >
+                <option value="">All Accounts</option>
+                <option v-for="account in accounts" :key="account.id" :value="account.id">
+                  {{ account.account_name }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">ID</label>
+              <input
+                type="number"
+                v-model="channelFilters.id"
+                placeholder="Filter by ID"
+                class="w-full p-2 rounded bg-slate-600 text-white"
+              >
+            </div>
+          </div>
+
           <table class="table w-full">
             <thead>
             <tr>
@@ -365,7 +437,7 @@ const formatDate = (dateString) => {
 
         <div v-if="tab === 'logs'" class="border-4 border-blue-500">
           <!-- Filter controls -->
-          <div class="p-4 bg-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="p-4 bg-slate-700 grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label class="block text-sm font-medium mb-1">Start Date</label>
               <input
@@ -409,6 +481,18 @@ const formatDate = (dateString) => {
                 <option value="error">Error</option>
               </select>
             </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Valid Trade</label>
+              <select
+                v-model="filters.is_valid_trade"
+                @change="fetchLogs()"
+                class="w-full p-2 rounded bg-slate-600 text-white"
+              >
+                <option value="">All</option>
+                <option value="1">Valid</option>
+                <option value="0">Invalid</option>
+              </select>
+            </div>
           </div>
 
           <table class="table w-full">
@@ -417,6 +501,7 @@ const formatDate = (dateString) => {
               <th class="px-4 py-2">Created At</th>
               <th class="px-4 py-2">Status</th>
               <th class="px-4 py-2">Channel</th>
+              <th class="px-4 py-2">Account</th>
               <th class="px-4 py-2">Message</th>
               <th class="px-4 py-2">Payload Sent</th>
               <td class="px-4 py-2"></td>
@@ -427,6 +512,7 @@ const formatDate = (dateString) => {
               <td class="border px-4 py-2">{{ log.created_at }}</td>
               <td class="border px-4 py-2" :class="{'bg-red-500': Boolean(log.exception), 'bg-green-500': log.trade_response !== 'null'}"></td>
               <td class="border px-4 py-2">{{ log.channel }}</td>
+              <td class="border px-4 py-2">{{ log.account_name || 'Default' }}</td>
               <td class="border px-4 py-2">{{ excerpt(log.message) }}</td>
               <td class="border px-4 py-2">{{ log.trade_response !== "null" ? log.parameters : '' }}</td>
               <td class="border px-4 py-2 text-center">
@@ -491,7 +577,7 @@ const formatDate = (dateString) => {
               </button>
             </div>
             <div class="p-4" v-if="selectedLog">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
                   <p class="text-gray-400">ID:</p>
                   <p>{{ selectedLog.id }}</p>
@@ -503,6 +589,10 @@ const formatDate = (dateString) => {
                 <div>
                   <p class="text-gray-400">Channel:</p>
                   <p>{{ selectedLog.channel }}</p>
+                </div>
+                <div>
+                  <p class="text-gray-400">Account:</p>
+                  <p>{{ selectedLog.account_name || 'Default' }}</p>
                 </div>
                 <div>
                   <p class="text-gray-400">Status:</p>
