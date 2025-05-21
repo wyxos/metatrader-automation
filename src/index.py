@@ -86,13 +86,25 @@ async def start_telegram_client():
 
     await client.run_until_disconnected()
 
+# Main async function that combines client startup and message listening
+async def main():
+    await initialize_telegram_client()
+    try:
+        await start_telegram_client()
+    except asyncio.CancelledError:
+        pass
+    finally:
+        if client and client.is_connected():
+            await client.disconnect()
+
 # Main function
 if __name__ == "__main__":
-    # clear terminal on Windows
+    # Clear terminal on Windows
     os.system('cls')
-    # Start Telegram client
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(initialize_telegram_client())
-    loop.run_until_complete(start_telegram_client())
 
+    try:
+        # Use asyncio.run for clean startup and shutdown
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # Handle graceful shutdown on user interrupt (CTRL+C)
+        logging.info("Interrupted by user. Shutting down...")
