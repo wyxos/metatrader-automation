@@ -37,7 +37,7 @@ if order_json:
         order_json['tp'] = tp
 
         # Send the order with account info
-        response = sendOrder(order_json, tp, account_info=test_account_info, shutdown_after=is_last_order)
+        response = sendOrder(order_json, account_info=test_account_info, shutdown_after=is_last_order)
         print("Response:", json.dumps(response, indent=2))
 
         # If an order fails, don't try to send more orders

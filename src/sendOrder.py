@@ -3,7 +3,7 @@ import MetaTrader5 as mt5
 import logging
 from validateOrder import validateOrder
 
-def sendOrder(order_json, tp, account_info=None, shutdown_after=False):
+def sendOrder(order_json, tp=None, account_info=None, shutdown_after=False):
     # Parse the JSON string to a Python dictionary
     order_data = order_json
 
@@ -11,7 +11,8 @@ def sendOrder(order_json, tp, account_info=None, shutdown_after=False):
     price = order_data["price"]
     signal = order_data["signal"].lower()  # "buy" or "sell"
     symbol = order_data["symbol"]
-    tp = tp
+    # Use the tp parameter if provided, otherwise use the one from order_data
+    tp = tp if tp is not None else order_data["tp"]
     sl = order_data["sl"]
 
     # Check if MT5 is already initialized
