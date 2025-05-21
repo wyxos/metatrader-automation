@@ -94,11 +94,18 @@ def process_message(message, channel, db_connection=None):
             failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
         else:
             is_valid_trade = 1
+            # Make a copy of the original tp values
+            original_tp_values = orderJson['tp'].copy()
+
             # Iterate through each take-profit (tp) value and send an order
-            for i, tp in enumerate(orderJson['tp']):
+            for i, tp in enumerate(original_tp_values):
+                # Set the current tp value
                 orderJson['tp'] = tp
+
                 # Only shutdown after the last order
-                is_last_order = i == len(orderJson['tp']) - 1
+                is_last_order = i == len(original_tp_values) - 1
+
+                # Send the order
                 trade_response = sendOrder(orderJson, tp, account_info, shutdown_after=is_last_order)
                 if trade_response.get('success'):
                     # success is present and truthy
@@ -115,11 +122,14 @@ def process_message(message, channel, db_connection=None):
         failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
 
     try:
+        # Get account name if account_info is available
+        account_name = account_info['account_name'] if account_info else None
+
         # Insert the log into the database
         cursor.execute('''
-            INSERT INTO logs (channel, message, parameters, trade_response, exception, is_valid_trade, processed_at, failed_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (channel, message, parameters, json.dumps(trade_response), exception, is_valid_trade, processed_at, failed_at, created_at))
+            INSERT INTO logs (channel, message, parameters, trade_response, exception, is_valid_trade, processed_at, failed_at, created_at, account_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (channel, message, parameters, json.dumps(trade_response), exception, is_valid_trade, processed_at, failed_at, created_at, account_name))
         conn.commit()
         record_id = cursor.lastrowid
 

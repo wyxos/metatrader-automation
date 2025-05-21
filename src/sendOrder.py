@@ -14,20 +14,25 @@ def sendOrder(order_json, tp, account_info=None, shutdown_after=False):
     tp = tp
     sl = order_data["sl"]
 
-    # Initialize MetaTrader 5
-    if not mt5.initialize():
-        print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
-        return {"success": False, "error": "Initialization failed"}
+    # Check if MT5 is already initialized
+    is_initialized = mt5.terminal_info() is not None
 
-    # If account info is provided, try to login to that account
-    if account_info:
-        # Shutdown current connection
-        mt5.shutdown()
-
-        # Initialize again with the specified account
+    # Initialize MetaTrader 5 if not already initialized
+    if not is_initialized:
         if not mt5.initialize():
             print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
             return {"success": False, "error": "Initialization failed"}
+
+    # If account info is provided, try to login to that account
+    if account_info:
+        # Only shutdown if we're already initialized
+        if is_initialized:
+            mt5.shutdown()
+
+            # Initialize again with the specified account
+            if not mt5.initialize():
+                print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
+                return {"success": False, "error": "Initialization failed"}
 
         # Login to the specified account
         login_result = mt5.login(
