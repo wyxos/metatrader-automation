@@ -25,8 +25,8 @@ class TestApp:
 
     def test_index_route(self, client, monkeypatch):
         """Test the index route returns the correct HTML"""
-        # Mock the is_dev variable to be False
-        monkeypatch.setattr('app.is_dev', False)
+        # Mock the is_dev variable to be True to get the dev mode HTML
+        monkeypatch.setattr('app.is_dev', True)
 
         # Make a request to the index route
         response = client.get('/')

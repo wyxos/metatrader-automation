@@ -12,6 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 def mock_mt5():
     with patch('MetaTrader5.initialize') as mock_initialize, \
          patch('MetaTrader5.shutdown') as mock_shutdown, \
+         patch('MetaTrader5.login') as mock_login, \
          patch('MetaTrader5.account_info') as mock_account_info, \
          patch('MetaTrader5.symbol_select') as mock_symbol_select, \
          patch('MetaTrader5.symbol_info_tick') as mock_symbol_info_tick, \
@@ -19,6 +20,7 @@ def mock_mt5():
 
         # Configure the mocks
         mock_initialize.return_value = True
+        mock_login.return_value = True
 
         # Mock account_info
         account_info = MagicMock()
@@ -56,6 +58,7 @@ def mock_mt5():
         yield {
             "initialize": mock_initialize,
             "shutdown": mock_shutdown,
+            "login": mock_login,
             "account_info": mock_account_info,
             "symbol_select": mock_symbol_select,
             "symbol_info_tick": mock_symbol_info_tick,

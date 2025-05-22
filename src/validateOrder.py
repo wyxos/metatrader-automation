@@ -75,8 +75,9 @@ def validateOrder(message):
 
     # Special case for "tp N PRICE" format (e.g., "tp 1 107100")
     # This regex looks for patterns like "tp 1 107100" and captures the price value
-    tp_indexed_matches = re.findall(r'\btp\s+\d+\s+(\d+\.?\d*)', message_without_dot_tp, re.IGNORECASE)
-    tp_indexed_values = [float(tp) for tp in tp_indexed_matches] if tp_indexed_matches else []
+    # The pattern ensures we're capturing the second number (price) after "tp N"
+    tp_indexed_matches = re.findall(r'\btp\s+(\d+)\s+(\d+\.?\d*)', message_without_dot_tp, re.IGNORECASE)
+    tp_indexed_values = [float(match[1]) for match in tp_indexed_matches] if tp_indexed_matches else []
 
     # Remove the indexed tp patterns from the message to avoid double matching
     message_without_indexed_tp = message_without_dot_tp
