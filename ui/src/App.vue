@@ -510,7 +510,7 @@ const formatDate = (dateString) => {
             <tbody>
             <tr v-for="log in logs" :key="log.id">
               <td class="border px-4 py-2">{{ log.created_at }}</td>
-              <td class="border px-4 py-2" :class="{'bg-red-500': Boolean(log.exception), 'bg-green-500': log.trade_response !== 'null'}"></td>
+              <td class="border px-4 py-2" :class="{'bg-red-500': Boolean(log.exception) || (log.trade_response !== 'null' && !JSON.parse(log.trade_response).success), 'bg-green-500': log.trade_response !== 'null' && JSON.parse(log.trade_response).success}"></td>
               <td class="border px-4 py-2">{{ log.channel }}</td>
               <td class="border px-4 py-2">{{ log.account_name }}</td>
               <td class="border px-4 py-2">{{ excerpt(log.message) }}</td>
@@ -596,8 +596,8 @@ const formatDate = (dateString) => {
                 </div>
                 <div>
                   <p class="text-gray-400">Status:</p>
-                  <p :class="{'text-red-500': Boolean(selectedLog.exception), 'text-green-500': selectedLog.trade_response !== 'null'}">
-                    {{ Boolean(selectedLog.exception) ? 'Error' : selectedLog.trade_response !== 'null' ? 'Success' : 'Pending' }}
+                  <p :class="{'text-red-500': Boolean(selectedLog.exception) || (selectedLog.trade_response !== 'null' && !JSON.parse(selectedLog.trade_response).success), 'text-green-500': selectedLog.trade_response !== 'null' && JSON.parse(selectedLog.trade_response).success}">
+                    {{ Boolean(selectedLog.exception) || (selectedLog.trade_response !== 'null' && !JSON.parse(selectedLog.trade_response).success) ? 'Error' : selectedLog.trade_response !== 'null' && JSON.parse(selectedLog.trade_response).success ? 'Success' : 'Pending' }}
                   </p>
                 </div>
               </div>

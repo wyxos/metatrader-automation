@@ -1,7 +1,12 @@
 import json
 import MetaTrader5 as mt5
 import logging
+import os
+from dotenv import load_dotenv
 from validateOrder import validateOrder
+
+# Load environment variables
+load_dotenv()
 
 def sendOrder(order_json, account_info, tp=None, shutdown_after=False):
     # Parse the JSON string to a Python dictionary
@@ -22,22 +27,33 @@ def sendOrder(order_json, account_info, tp=None, shutdown_after=False):
     if is_initialized:
         mt5.shutdown()
 
-    # Initialize MetaTrader 5 with account credentials
-    if not mt5.initialize(login=int(account_info['login_id']),
-                         password=account_info['password'],
-                         server=account_info['server_name']):
+    # Get the path to MetaTrader 5 terminal
+    # Default path for MetaTrader 5 on Windows
+    mt5_path = os.getenv('MT5_PATH', 'C:/Program Files/MetaTrader 5/terminal64.exe')
+
+    # Convert backslashes to forward slashes if needed
+    mt5_path = mt5_path.replace('\\', '/')
+
+    # First initialize MetaTrader 5 with just the path
+    if not mt5.initialize(path=mt5_path):
         print("MT5 initialization failed")
         print("Last error:", mt5.last_error())
         return {"success": False, "error": f"Initialization failed: {mt5.last_error()}"}
 
-    # Verify login was successful
-    if not mt5.login(login=int(account_info['login_id']),
-                    password=account_info['password'],
-                    server=account_info['server_name']):
-        error_code = mt5.last_error()
-        print(f"Failed to login to account {account_info['account_name']}, error code:", error_code)
+    # Now login to the account
+    def account_login(login, password, server):
+        if mt5.login(login=login, password=password, server=server):
+            print(f"Logged in successfully to account {account_info['account_name']}")
+            return True
+        else:
+            error_code = mt5.last_error()
+            print(f"Failed to login to account {account_info['account_name']}, error code:", error_code)
+            return False
+
+    # Attempt to login
+    if not account_login(int(account_info['login_id']), account_info['password'], account_info['server_name']):
         mt5.shutdown()
-        return {"success": False, "error": f"Login failed with error code {error_code}"}
+        return {"success": False, "error": f"Login failed with error code {mt5.last_error()}"}
 
     # Ensure AutoTrading is enabled
     mt5_account_info = mt5.account_info()
