@@ -300,8 +300,13 @@ const formatDate = (dateString) => {
         </ul>
 
         <div v-if="tab === 'channels'" class="border-4 border-blue-500">
-          <div class="flex items-center gap-4 p-4">
-            Toggle <o-switch v-model="toggleAll" @change="onToggleAll"></o-switch>
+          <div class="flex items-center justify-between gap-4 p-4">
+            <div class="flex items-center gap-4">
+              Toggle <o-switch v-model="toggleAll" @change="onToggleAll"></o-switch>
+            </div>
+            <div class="text-sm">
+              Total Channels: {{ channels.length }}
+            </div>
           </div>
 
           <!-- Filter controls for channels -->
@@ -333,6 +338,7 @@ const formatDate = (dateString) => {
                 class="w-full p-2 rounded bg-slate-600 text-white"
               >
                 <option value="">All Accounts</option>
+                <option value="none">No Account</option>
                 <option v-for="account in accounts" :key="account.id" :value="account.id">
                   {{ account.account_name }}
                 </option>
