@@ -226,3 +226,111 @@ class TestProcessMessage:
 
         # Verify that the database rollback was called
         mock_conn.rollback.assert_called_once()
+
+    @patch('processMessage.validateOrder')
+    @patch('processMessage.sendOrder')
+    def test_process_message_initialization_failed(self, mock_send_order, mock_validate_order, mock_db):
+        # Setup mocks
+        mock_validate_order.return_value = {
+            "signal": "buy",
+            "symbol": "XAUUSD",
+            "price": 2000.0,
+            "sl": 1990.0,
+            "tp": [2010.0]
+        }
+
+        # Mock initialization failure
+        mock_send_order.return_value = {
+            "success": False,
+            "error": "Initialization failed: Some error"
+        }
+
+        # Setup the database with test data
+        cursor = mock_db["cursor"]
+
+        # Create the mt_accounts table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS mt_accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_name TEXT,
+                server_name TEXT,
+                login_id TEXT,
+                password TEXT
+            )
+        ''')
+
+        # Create the channel_account_mappings table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS channel_account_mappings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel_id INTEGER,
+                account_id INTEGER
+            )
+        ''')
+
+        # Insert a test account
+        cursor.execute('''
+            INSERT INTO mt_accounts (account_name, server_name, login_id, password)
+            VALUES (?, ?, ?, ?)
+        ''', ("Account 1", "Server 1", "12345", "password1"))
+
+        # Get the channel ID for "Test Channel"
+        cursor.execute('SELECT id FROM channels WHERE name = ?', ("Test Channel",))
+        channel_row = cursor.fetchone()
+
+        if channel_row:
+            channel_id = channel_row[0]
+
+            # Insert a mapping for the account
+            cursor.execute('''
+                INSERT INTO channel_account_mappings (channel_id, account_id)
+                VALUES (?, ?)
+            ''', (channel_id, 1))
+
+        mock_db["conn"].commit()
+
+        # Print the account info for debugging
+        cursor.execute('''
+            SELECT a.* FROM mt_accounts a
+            JOIN channel_account_mappings m ON a.id = m.account_id
+            JOIN channels c ON m.channel_id = c.id
+            WHERE c.name = ?
+        ''', ("Test Channel",))
+        account_row = cursor.fetchone()
+        print("Account info found:", account_row)
+
+        # Call the function with the mock database connection
+        process_message("XAUUSD buy 2000 sl 1990 tp 2010", "Test Channel", mock_db["conn"])
+
+        # Verify that validateOrder was called with the correct message
+        mock_validate_order.assert_called_once_with("XAUUSD buy 2000 sl 1990 tp 2010")
+
+        # Verify that sendOrder was called once
+        assert mock_send_order.call_count == 1
+
+        # Query the database to verify the log entry
+        cursor.execute("SELECT * FROM logs WHERE channel = 'Test Channel'")
+        logs = cursor.fetchall()
+
+        # There should be at least one log entry
+        assert len(logs) > 0
+
+        # Print all logs for debugging
+        print("All logs:", logs)
+
+        # Get the main log entry (the last one)
+        main_log = logs[-1]
+
+        # Print the main log for debugging
+        print("Main log:", main_log)
+        print("Log columns:", [i for i in range(len(main_log))])
+
+        # Parse the trade_response JSON
+        trade_response = json.loads(main_log[4])  # Assuming trade_response is at index 4
+
+        # Check that the trade_response has success=False
+        assert trade_response["success"] is False
+
+        # Check that failed_at is set and processed_at is None
+        assert main_log[9] is not None  # failed_at
+        assert main_log[8] is None  # processed_at

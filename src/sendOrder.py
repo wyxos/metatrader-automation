@@ -3,7 +3,7 @@ import MetaTrader5 as mt5
 import logging
 from validateOrder import validateOrder
 
-def sendOrder(order_json, tp=None, account_info=None, shutdown_after=False):
+def sendOrder(order_json, account_info, tp=None, shutdown_after=False):
     # Parse the JSON string to a Python dictionary
     order_data = order_json
 
@@ -18,42 +18,34 @@ def sendOrder(order_json, tp=None, account_info=None, shutdown_after=False):
     # Check if MT5 is already initialized
     is_initialized = mt5.terminal_info() is not None
 
-    # Initialize MetaTrader 5 if not already initialized
-    if not is_initialized:
-        if not mt5.initialize():
-            print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
-            return {"success": False, "error": "Initialization failed"}
+    # If already initialized, shutdown first
+    if is_initialized:
+        mt5.shutdown()
 
-    # If account info is provided, try to login to that account
-    if account_info:
-        # Only shutdown if we're already initialized
-        if is_initialized:
-            mt5.shutdown()
+    # Initialize MetaTrader 5 with account credentials
+    if not mt5.initialize(login=int(account_info['login_id']),
+                         password=account_info['password'],
+                         server=account_info['server_name']):
+        print("MT5 initialization failed")
+        print("Last error:", mt5.last_error())
+        return {"success": False, "error": f"Initialization failed: {mt5.last_error()}"}
 
-            # Initialize again with the specified account
-            if not mt5.initialize():
-                print("Failed to initialize MetaTrader 5, error code:", mt5.last_error())
-                return {"success": False, "error": "Account info supplied but initialization failed"}
-
-        # Login to the specified account
-        login_result = mt5.login(
-            login=int(account_info['login_id']),
-            password=account_info['password'],
-            server=account_info['server_name']
-        )
-
-        if not login_result:
-            error_code = mt5.last_error()
-            print(f"Failed to login to account {account_info['account_name']}, error code:", error_code)
-            return {"success": False, "error": f"Login failed with error code {error_code}"}
+    # Verify login was successful
+    if not mt5.login(login=int(account_info['login_id']),
+                    password=account_info['password'],
+                    server=account_info['server_name']):
+        error_code = mt5.last_error()
+        print(f"Failed to login to account {account_info['account_name']}, error code:", error_code)
+        mt5.shutdown()
+        return {"success": False, "error": f"Login failed with error code {error_code}"}
 
     # Ensure AutoTrading is enabled
-    account_info = mt5.account_info()
-    if account_info is None:
+    mt5_account_info = mt5.account_info()
+    if mt5_account_info is None:
         print("Failed to retrieve account information, error code:", mt5.last_error())
         mt5.shutdown()
         return {"success": False, "error": "Account information retrieval failed"}
-    elif not account_info.trade_allowed:
+    elif not mt5_account_info.trade_allowed:
         print("AutoTrading is disabled by client. Please enable AutoTrading in MetaTrader 5.")
         mt5.shutdown()
         return {"success": False, "error": "AutoTrading is disabled"}
@@ -137,6 +129,14 @@ if __name__ == "__main__":
 #     order_json = { "price": 2535.30, "signal": "buy", "symbol": "AUDJPY", "tp": [2640.30, 2645.30], "sl": 2629.30 }
 #     order_json = validateOrder("BTCUSD buy 92600 tp 1 92700 tp 2 92800 tp 3 92900 tp 4 94600 sl 90600 no financial advice")
 
-    response = sendOrder(order_json, order_json["tp"][0])
+    # Example account info - replace with actual account details for testing
+    example_account_info = {
+        'account_name': 'Example Account',
+        'login_id': '12345678',
+        'password': 'password123',
+        'server_name': 'MetaQuotes-Demo'
+    }
+
+    response = sendOrder(order_json, example_account_info, order_json["tp"][0])
 
     print(json.dumps(response, indent=2))

@@ -6,6 +6,13 @@ from sendOrder import sendOrder
 # Test cases for sendOrder function
 @pytest.mark.usefixtures("mock_mt5")
 class TestSendOrder:
+    # Test account info to use in all tests
+    test_account_info = {
+        'account_name': 'Test Account',
+        'login_id': '12345678',
+        'password': 'password123',
+        'server_name': 'MetaQuotes-Demo'
+    }
 
     def test_send_buy_order_success(self, mock_mt5):
         # Test sending a successful buy order
@@ -18,7 +25,7 @@ class TestSendOrder:
         }
 
         # Call the function with the first TP value and explicit shutdown
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is True
@@ -52,7 +59,7 @@ class TestSendOrder:
         }
 
         # Call the function with explicit shutdown
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is True
@@ -82,7 +89,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -107,7 +114,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -135,7 +142,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -159,7 +166,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -185,7 +192,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -212,7 +219,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False
@@ -246,7 +253,7 @@ class TestSendOrder:
         }
 
         # Call the function
-        result = sendOrder(order_data, order_data["tp"][0], shutdown_after=True)
+        result = sendOrder(order_data, self.test_account_info, order_data["tp"][0], shutdown_after=True)
 
         # Verify the result
         assert result["success"] is False

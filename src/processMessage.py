@@ -160,7 +160,7 @@ def process_message(message, channel, db_connection=None):
                         is_last_order = (i == len(original_tp_values) - 1) and (account == all_accounts[-1])
 
                         # Send the order
-                        account_trade_response = sendOrder(orderJson, account_info=account, shutdown_after=is_last_order)
+                        account_trade_response = sendOrder(orderJson, account, shutdown_after=is_last_order)
 
                         # Add this response to our collection
                         all_responses.append({
@@ -185,11 +185,18 @@ def process_message(message, channel, db_connection=None):
                             logging.error(f"Error inserting log for account {account['account_name']}: {e}")
 
                 # Set trade_response with all collected responses
+                # Check if any of the account responses were successful
+                any_success = any(response["response"].get("success", False) for response in all_responses)
+
                 trade_response = {
-                    "success": True,
+                    "success": any_success,
                     "responses": all_responses
                 }
-                processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+
+                if any_success:
+                    processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
             else:
                 # Regular case - send to the mapped account or default
                 # Iterate through each take-profit (tp) value and send an order
@@ -201,13 +208,14 @@ def process_message(message, channel, db_connection=None):
                     is_last_order = i == len(original_tp_values) - 1
 
                     # Send the order
-                    trade_response = sendOrder(orderJson, account_info=account_info, shutdown_after=is_last_order)
+                    trade_response = sendOrder(orderJson, account_info, shutdown_after=is_last_order)
                     if trade_response.get('success'):
                         # success is present and truthy
                         processed_at = time.strftime('%Y-%m-%d %H:%M:%S')
                     else:
                         # either not present, or falsy
                         failed_at = time.strftime('%Y-%m-%d %H:%M:%S')
+                        exception = trade_response.get('error', 'Order failed')
                         # If an order fails, don't try to send more orders
                         break
 

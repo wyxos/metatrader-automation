@@ -16,6 +16,7 @@ from init_db import initialize_database
 initialize_database()
 
 is_dev = os.getenv('FRONTEND_ENV', 'prod') == 'dev'
+app_debug = os.getenv('APP_DEBUG', 'false').lower() == 'true'
 
 if is_dev:
     app = Flask(__name__)  # No static/template folders
@@ -79,7 +80,7 @@ def get_logs(db_connection=None):
     # Apply status filter
     if status:
         if status == 'success':
-            query += ' AND l.trade_response != "null"'
+            query += ' AND l.trade_response != "null" AND json_extract(l.trade_response, "$.success") = 1'
         elif status == 'error':
             query += ' AND l.exception IS NOT NULL'
 
@@ -500,4 +501,4 @@ if __name__ == '__main__':
     # Launch browser after short delay
     threading.Timer(1.5, open_browser).start()
 
-    app.run(debug=True, use_reloader=False, port=8000)
+    app.run(debug=app_debug, use_reloader=False, port=8000)
