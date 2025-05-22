@@ -1,21 +1,26 @@
-# MetaTrader-Telegram Integration
+# A.U.T.O. - Automated Uptake of Telegram Orders
 
 A Python application that integrates Telegram with MetaTrader 5 for automated trading based on signals received from Telegram channels.
 
 ## Features
 
-- Monitor Telegram channels for trading signals
-- Parse and validate trading signals
-- Send orders to MetaTrader 5
-- Web interface for monitoring and configuration
-- Logging of trades and signals
+- **Telegram Integration**: Monitor Telegram channels for trading signals
+- **Signal Parsing**: Automatically parse and validate trading signals in various formats
+- **MetaTrader 5 Integration**: Send orders directly to MetaTrader 5
+- **Multi-Account Support**: Send trades to multiple MetaTrader accounts simultaneously
+- **Web Interface**: Monitor and configure the system through a user-friendly web interface
+- **Channel Management**: Enable/disable channels, filter by various criteria
+- **Account Management**: Add, edit, and delete MetaTrader accounts
+- **Channel-Account Mapping**: Map specific Telegram channels to specific MetaTrader accounts
+- **Detailed Logging**: Track all signals, trades, and responses
+- **Error Handling**: Robust error handling and reporting
 
 ## Requirements
 
 - Python 3.8+
 - MetaTrader 5
 - Telegram account
-- Flask (for web interface)
+- Node.js and npm (for UI development)
 
 ## Installation
 
@@ -26,19 +31,53 @@ git clone https://github.com/yourusername/metatrader-telegram.git
 cd metatrader-telegram
 ```
 
-2. Install the dependencies:
+2. Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file with your credentials (see `.env.example` for reference):
+3. Install UI dependencies (optional, for development):
+
+```bash
+cd ui
+npm install
+```
+
+4. Create a `.env` file with your credentials (see `.env.example` for reference):
 
 ```bash
 cp .env.example .env
 ```
 
 Then edit the `.env` file with your actual credentials.
+
+## Configuration
+
+The application uses environment variables for configuration. Key variables include:
+
+### Telegram Configuration
+
+- `TELEGRAM_API_ID`: Your Telegram API ID
+- `TELEGRAM_API_HASH`: Your Telegram API Hash
+- `TELEGRAM_SESSION_STRING`: Your Telegram session string
+
+To obtain API credentials from Telegram:
+
+1. Go to [https://my.telegram.org/auth](https://my.telegram.org/auth)
+2. Log in with your phone number
+3. Go to "API development tools"
+4. Create a new application
+5. Copy the API ID and API Hash to your `.env` file
+
+### MetaTrader 5 Configuration
+
+- `MT5_PATH`: Path to your MetaTrader 5 terminal executable (e.g., `C:/Program Files/MetaTrader 5/terminal64.exe`)
+
+### Application Configuration
+
+- `FRONTEND_ENV`: Set to `dev` for development mode, `prod` for production
+- `APP_DEBUG`: Set to `true` to enable debug mode, `false` to disable
 
 ## Usage
 
@@ -50,9 +89,24 @@ python src/app.py
 
 2. Open your web browser and navigate to `http://localhost:8000`
 
-3. Configure the Telegram channels you want to monitor
+3. The web interface has three main tabs:
+   - **Logs**: View all trading signals and their outcomes
+   - **Channels**: Configure which Telegram channels to monitor
+   - **Accounts**: Manage your MetaTrader 5 accounts
 
-4. The application will automatically process trading signals from the enabled channels
+4. To set up a new channel:
+   - Go to the Channels tab
+   - The application will automatically detect available channels
+   - Enable the channels you want to monitor
+   - Optionally, map each channel to a specific MetaTrader account
+
+5. To set up a new MetaTrader account:
+   - Go to the Accounts tab
+   - Click "Add Account"
+   - Enter the account details (name, server, login ID, password)
+   - Click "Save"
+
+6. The application will automatically process trading signals from the enabled channels and send orders to the configured MetaTrader accounts.
 
 ## Project Structure
 
@@ -70,13 +124,13 @@ python src/app.py
   - `conftest.py`: Common test fixtures
   - `test_*.py`: Test files for each module
 - `ui/`: User interface files
+  - `src/`: Vue.js source files
+  - `dist/`: Compiled UI files (production)
 - `logs/`: Log files
 
 ## Testing
 
-This project includes a comprehensive test suite. See [tests/README.md](tests/README.md) for detailed testing instructions.
-
-To run the tests:
+This project includes a comprehensive test suite. To run the tests:
 
 ```bash
 # Install test dependencies
@@ -89,27 +143,24 @@ pytest
 pytest --cov=src
 ```
 
-## Configuration
+## Troubleshooting
 
-The application uses environment variables for configuration. See `.env.example` for the required variables.
+### MetaTrader 5 Connection Issues
 
-### Telegram Configuration
+If you encounter "Initialization failed" errors:
 
-You need to obtain API credentials from Telegram:
+1. Ensure the `MT5_PATH` in your `.env` file is correct
+2. Make sure MetaTrader 5 is installed and can be launched manually
+3. Check that your account credentials are correct
+4. Ensure AutoTrading is enabled in MetaTrader 5
 
-1. Go to [https://my.telegram.org/auth](https://my.telegram.org/auth)
-2. Log in with your phone number
-3. Go to "API development tools"
-4. Create a new application
-5. Copy the API ID and API Hash to your `.env` file
+### Telegram Connection Issues
 
-### MetaTrader 5 Configuration
+If you have issues connecting to Telegram:
 
-You need to provide your MetaTrader 5 account credentials:
-
-1. Open MetaTrader 5
-2. Go to Account -> Account Details
-3. Copy your account number, password, and server to your `.env` file
+1. Verify your API credentials in the `.env` file
+2. Ensure your Telegram session is valid
+3. Check your internet connection
 
 ## Contributing
 
