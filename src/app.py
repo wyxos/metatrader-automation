@@ -178,8 +178,11 @@ def get_channels(db_connection=None):
         params.append(int(enabled))
 
     if account_id:
-        query += ' AND m.account_id = ?'
-        params.append(int(account_id))
+        if account_id == 'none':
+            query += ' AND m.account_id IS NULL'
+        else:
+            query += ' AND m.account_id = ?'
+            params.append(int(account_id))
 
     if channel_id:
         query += ' AND CAST(c.telegram_id AS TEXT) LIKE ?'
