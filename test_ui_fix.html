@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test UI Fix</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.31/dist/vue.global.js"></script>
+    <style>
+        .bg-red-500 { background-color: red; }
+        .bg-green-500 { background-color: green; }
+        .text-red-500 { color: red; }
+        .text-green-500 { color: green; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #ddd; padding: 8px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Test UI Fix</h1>
+        <h2>Before Fix</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Message</th>
+                    <th>Trade Response</th>
+                    <th>Exception</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td :class="{'bg-red-500': Boolean(log.exception), 'bg-green-500': log.trade_response !== 'null'}"></td>
+                    <td>{{ log.message }}</td>
+                    <td>{{ log.trade_response }}</td>
+                    <td>{{ log.exception }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p :class="{'text-red-500': Boolean(log.exception), 'text-green-500': log.trade_response !== 'null'}">
+            {{ Boolean(log.exception) ? 'Error' : log.trade_response !== 'null' ? 'Success' : 'Pending' }}
+        </p>
+
+        <h2>After Fix</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Message</th>
+                    <th>Trade Response</th>
+                    <th>Exception</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td :class="{'bg-red-500': Boolean(log.exception) || (log.trade_response !== 'null' && !JSON.parse(log.trade_response).success), 'bg-green-500': log.trade_response !== 'null' && JSON.parse(log.trade_response).success}"></td>
+                    <td>{{ log.message }}</td>
+                    <td>{{ log.trade_response }}</td>
+                    <td>{{ log.exception }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p :class="{'text-red-500': Boolean(log.exception) || (log.trade_response !== 'null' && !JSON.parse(log.trade_response).success), 'text-green-500': log.trade_response !== 'null' && JSON.parse(log.trade_response).success}">
+            {{ Boolean(log.exception) || (log.trade_response !== 'null' && !JSON.parse(log.trade_response).success) ? 'Error' : log.trade_response !== 'null' && JSON.parse(log.trade_response).success ? 'Success' : 'Pending' }}
+        </p>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const log = ref({
+                    message: "BTCUSD buy 111300 tp 1 111500 tp 2 111600 tp 3 111700 tp 4 114000 sl 109300 no financial advice",
+                    trade_response: '{"success": false, "error": "Initialization failed: (-10005, \'IPC timeout\')"}',
+                    exception: "Initialization failed: (-10005, 'IPC timeout')"
+                });
+
+                return {
+                    log
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
