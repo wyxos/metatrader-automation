@@ -52,6 +52,9 @@ def cleanMessage(input_string):
     # Normalize sequences like "tp.575" or "tp.580"
     cleaned_string = re.sub(r'\btp\.\s*(\d+)', r'tp \1', cleaned_string)
 
+    # Normalize patterns like "tp1 3128" to "tp 3128"
+    cleaned_string = re.sub(r'\btp(\d+)\s+(?=\d)', 'tp ', cleaned_string)
+
     # Replace multiple spaces with a single space
     cleaned_string = re.sub(r' {2,}', ' ', cleaned_string)
 
