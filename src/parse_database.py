@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from validate_trade_signal import validate_trade_signal
+from validateOrder import validateOrder
 
 def main():
     # Connect to the SQLite database
@@ -17,14 +17,14 @@ def main():
             rowid, message = row
 
             try:
-                # Call validate_trade_signal for each message
-                trade_signal = validate_trade_signal(message)
-                trade_signal_json = json.dumps(trade_signal)
+                # Validate and parse each message
+                order_data = validateOrder(message)
+                order_data_json = json.dumps(order_data)
 
                 # If successful, update the columns is_valid_trade and parameters
                 cursor.execute(
                     "UPDATE logs SET is_valid_trade = ?, parameters = ? WHERE rowid = ?",
-                    (1, trade_signal_json, rowid)
+                    (1, order_data_json, rowid)
                 )
                 print(f"Successfully processed row {rowid}")
 
